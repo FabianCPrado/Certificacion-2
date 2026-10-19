@@ -21,6 +21,8 @@ Clientes (5201)  ──REST──►  Pedidos (5101)  ──►  SQL Server · R
 
 ## Cómo correrlo
 
+> Primera vez: la guía paso a paso para instalar Docker Desktop y los servicios está en [PedidosSystem/docs/INSTALACION-DOCKER.md](PedidosSystem/docs/INSTALACION-DOCKER.md).
+
 ```powershell
 # 1. Contenedores (Redis, Redis Insight, Mongo, Mongo Express, Azurite, emulador de Cosmos)
 cd PedidosSystem
