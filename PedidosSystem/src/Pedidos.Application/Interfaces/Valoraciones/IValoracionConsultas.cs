@@ -6,5 +6,5 @@ namespace Pedidos.Application.Interfaces.Valoraciones;
 public interface IValoracionConsultas
 {
     /// <summary>Valoraciones de un producto, de la más nueva a la más vieja.</summary>
-    Task<IReadOnlyList<ValoracionDto>> ListarPorProductoAsync(Guid productoId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ValoracionDto>> ListarPorProductoAsync(string productoId, CancellationToken cancellationToken = default);
 }

@@ -24,8 +24,7 @@ public sealed class CrearPedidoCommandValidator : AbstractValidator<CrearPedidoC
         RuleForEach(c => c.Lineas).ChildRules(linea =>
         {
             linea.RuleFor(l => l.ProductoId).NotEmpty();
-            linea.RuleFor(l => l.NombreProducto).NotEmpty().MaximumLength(200);
-            linea.RuleFor(l => l.PrecioUnitario).GreaterThanOrEqualTo(0);
+            linea.RuleFor(l => l.Categoria).NotEmpty().MaximumLength(100);
             linea.RuleFor(l => l.Cantidad).GreaterThan(0);
         });
     }

@@ -161,8 +161,8 @@ Cada interfaz se conecta con su implementación en un solo lugar:
 
 | Interfaz | Implementación | Registrada en |
 |---|---|---|
-| `IPedidoRepository` · `IProductoRepository` | `PedidoRepository` · `ProductoRepository` | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
-| `IPedidosConsultas` · `IProductoConsultas` | `PedidosConsultas` · `ProductosConsultas` (EF Core) | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
+| `IPedidoRepository` | `PedidoRepository` | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
+| `IPedidosConsultas` | `PedidosConsultas` (EF Core) | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
 | `IPedidosReportes` | `PedidosReportes` (Dapper puro, sin EF Core: un método con procedimiento almacenado y otro con SELECT + LINQ a objetos) | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
 | `IDemoMalasPracticas` (solo Clase 4) | `DemoMalasPracticas` | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
 | `IAppDbContext` | `AppDbContext` | [InfrastructureServiceExtensions.cs](src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs) |
@@ -176,11 +176,19 @@ Cada interfaz se conecta con su implementación en un solo lugar:
 - **Behaviors = decoradores:** `LoggingBehavior` y `ValidationBehavior` envuelven a todos los handlers sin modificarlos (patrón Decorator, Clase 2).
 - **CQRS:** todo mensaje es un `ICommand` (cambia estado) o un `IQuery` (solo lee). Los comandos pasan por su `IXRepository` (reglas de negocio y persistencia, con tracking); las consultas pasan por su `IXConsultas`, que proyecta directo al DTO con `AsNoTracking`. Ninguna consulta usa un repositorio de escritura ni ningún comando usa consultas: lo verifican los tests de `CqrsArquitecturaTests`. Mismo modelo y misma base (`AppDbContext`).
 - **DTOs sin lógica:** `PedidoDto` y los demás solo transportan datos; los arma la proyección de la consulta, no un mapper.
-- **Un solo contexto con nombre genérico:** `AppDbContext` (interfaz `IAppDbContext`) agrupa Pedidos y Productos en una sola base; no se llama como una entidad para no confundirse, y no es una `IUnitOfWork` genérica.
+- **Un solo contexto con nombre genérico:** `AppDbContext` (interfaz `IAppDbContext`) agrupa los Pedidos (y su auditoría) en una sola base; no se llama como una entidad para no confundirse, y no es una `IUnitOfWork` genérica.
 - **MediatR 12.5.0:** última versión con licencia Apache 2.0 (desde la 13 requiere clave de licencia).
 - **Para más adelante:** eventos de dominio (Día 3, cápsula 3.6).
 
 ---
+
+## Productos (otro servicio)
+
+Los productos viven en **CatalogoSystem** (base `CatalogoDb` en SQL Server): Pedidos ya no tiene tabla `Productos`. Un producto se identifica por **categoría + id** (el id es un texto). Pedidos los consulta y los modifica **por REST** desde Infrastructure (`Rest/Catalogo`, `CatalogoRestProductos`) a través de `ICatalogoProductos`; Application no sabe que hay HTTP detrás. La URL se configura en `Servicios:Catalogo` (`https://localhost:7301/`). Hay que arrancar antes CatalogoSystem; si no responde, Pedidos devuelve **503**.
+
+- **Líneas de pedido:** el cliente envía solo `productoId`, `categoria` y `cantidad`; el nombre y el precio los toma Pedidos del Catálogo al crear el pedido. La línea guarda `ProductoId`, `Categoria`, `NombreProducto` y `PrecioUnitario` (una foto del momento).
+- **Stock:** `CrearPedidoConStock` descuenta el stock en el Catálogo (`POST /api/productos/{categoria}/{id}/stock/descontar`, atómico). Son dos bases distintas, así que no hay una transacción única: si falla una línea o el guardado del pedido, se devuelve el stock ya descontado (`.../stock/reponer`).
+- **Base existente:** ejecutar de nuevo `scripts/crear-base-de-datos.sql` (idempotente): pasa `LineasPedido.ProductoId` a texto, agrega `Categoria` y elimina la tabla local `Productos`.
 
 ## Clientes (otro servicio)
 
@@ -220,11 +228,11 @@ dotnet run --project src/Pedidos.Api --launch-profile https
 | POST | `/api/pedidos/{id}/cancelar` | `CancelarPedidoCommand` | 204, 404, 409 |
 | POST | `/api/pedidos/cancelar-borradores-antiguos?dias=30` | `CancelarBorradoresAntiguosCommand`: procedimiento `CancelarBorradoresAntiguos` ejecutado con Dapper | 200, 400 |
 | GET | `/api/auditoria?ruta=&desde=&hasta=` | `ListarAuditoriaQuery`: operaciones POST/PUT/DELETE guardadas por `AuditoriaMiddleware` (tabla `Auditoria`, script `scripts/auditoria.sql`) | 200, 400 |
-| POST · GET · GET · PUT · DELETE | `/api/productos`, `/api/productos/{id}` | Crear / Listar (`categoria`, `precioMinimo`) / Obtener / Actualizar / Eliminar producto | 2xx, 400, 404, 409 |
+| POST · GET · GET · PUT · DELETE | `/api/productos`, `/api/productos/{categoria}/{id}` | Crear / Listar (`categoria`, `pagina`) / Obtener / Actualizar / Eliminar producto: **todo pasa por REST al servicio Catálogo** | 2xx, 400, 404, 409, 503 |
 
 ### Demos de la Clase 4 (solo Development)
 
-Scripts (ejecutar en este orden sobre `PedidosDb`): `scripts/procedimientos-clase4.sql` (procedimientos `ActualizarStock`, `CancelarBorradoresAntiguos` y `ObtenerVentasPorDia`) y `scripts/seed-clase4.sql` (50.000 productos, 100 clientes, 1.000 pedidos; los clientes del seed ya no los usa ninguna API de Pedidos). Para probar Dapper en clase hay un grupo **Dapper** en Swagger: `GET /demo/clase4/ventas-por-dia` (ejecuta juntos los dos métodos de Dapper, sin EF Core: procedimiento almacenado y SELECT + LINQ a objetos) y `POST /demo/clase4/dapper/cancelar-borradores-antiguos?dias=30` (este último modifica datos). Dapper se usa en Pedidos con procedimientos almacenados: `PedidosReportes` (lectura, `QueryAsync`, sin EF Core) y `PedidoRepository.CancelarBorradoresAntiguosAsync` (escritura, `ExecuteAsync` con parámetro de salida). Cada tema tiene su versión `malo` y `bueno` en `/demo/clase4/...` (`linq`, `pedidos`, `n1`, `sql`, `reporte`, `stock`, `productos/aumentar`, `transaccion`). Para ver el SQL de cada una, poner `Microsoft.EntityFrameworkCore.Database.Command` en `Information` en el appsettings. `/demo/clase4/sql/malo` es vulnerable a propósito.
+Scripts (ejecutar en este orden sobre `PedidosDb`): `scripts/procedimientos-clase4.sql` (procedimientos `CancelarBorradoresAntiguos` y `ObtenerVentasPorDia`) y `scripts/seed-clase4.sql` (100 clientes y 1.000 pedidos; los productos de las líneas son ids de ejemplo, porque los productos viven en el Catálogo). Para probar Dapper en clase hay un grupo **Dapper** en Swagger: `GET /demo/clase4/ventas-por-dia` (ejecuta juntos los dos métodos de Dapper, sin EF Core: procedimiento almacenado y SELECT + LINQ a objetos) y `POST /demo/clase4/dapper/cancelar-borradores-antiguos?dias=30` (este último modifica datos). Dapper se usa en Pedidos con procedimientos almacenados: `PedidosReportes` (lectura, `QueryAsync`, sin EF Core) y `PedidoRepository.CancelarBorradoresAntiguosAsync` (escritura, `ExecuteAsync` con parámetro de salida). Cada tema tiene su versión `malo` y `bueno` en `/demo/clase4/...` (`pedidos`, `n1`, `reporte`, `transaccion`). Para ver el SQL de cada una, poner `Microsoft.EntityFrameworkCore.Database.Command` en `Information` en el appsettings.
 
 ### Ejemplo: crear un pedido
 
@@ -240,8 +248,8 @@ Scripts (ejecutar en este orden sobre `PedidosDb`): `scripts/procedimientos-clas
   },
   "moneda": "COP",
   "lineas": [
-    { "productoId": "0f8fad5b-d9cb-469f-a165-70867728950e", "nombreProducto": "Teclado", "precioUnitario": 150000, "cantidad": 2 },
-    { "productoId": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "nombreProducto": "Mouse", "precioUnitario": 60000, "cantidad": 1 }
+    { "productoId": "0f8fad5b-d9cb-469f-a165-70867728950e", "categoria": "Electro", "cantidad": 2 },
+    { "productoId": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "categoria": "Electro", "cantidad": 1 }
   ]
 }
 ```

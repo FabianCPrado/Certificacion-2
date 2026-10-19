@@ -7,7 +7,7 @@ namespace Pedidos.Application.Interfaces.Pedidos;
 /// Repositorio por agregado: la interfaz la define Application (lo que necesita)
 /// y la implementación, con las reglas de negocio, vive en Infrastructure.
 /// </summary>
-public sealed record LineaNueva(Guid ProductoId, string NombreProducto, Dinero PrecioUnitario, int Cantidad);
+public sealed record LineaNueva(string ProductoId, string Categoria, string NombreProducto, Dinero PrecioUnitario, int Cantidad);
 
 public interface IPedidoRepository
 {
@@ -21,15 +21,7 @@ public interface IPedidoRepository
         Guid clienteId, Email emailCliente, Direccion direccionEnvio, string moneda, DateTime creadoEn,
         IReadOnlyList<LineaNueva> lineas, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Crea el pedido con sus líneas y descuenta el stock de cada producto en una sola transacción:
-    /// si falla cualquier paso (producto inexistente, stock insuficiente), se revierten los cambios.
-    /// </summary>
-    Task<Pedido> CrearYDescontarStockAsync(
-        Guid clienteId, Email emailCliente, Direccion direccionEnvio, string moneda, DateTime creadoEn,
-        IReadOnlyList<LineaNueva> lineas, CancellationToken cancellationToken = default);
-
-    void AgregarLinea(Pedido pedido, Guid productoId, string nombreProducto, Dinero precioUnitario, int cantidad);
+    void AgregarLinea(Pedido pedido, string productoId, string categoria, string nombreProducto, Dinero precioUnitario, int cantidad);
 
     void Confirmar(Pedido pedido);
 

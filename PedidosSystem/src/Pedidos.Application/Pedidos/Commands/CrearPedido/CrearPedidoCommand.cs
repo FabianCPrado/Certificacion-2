@@ -13,4 +13,5 @@ public sealed record CrearPedidoCommand(
 
 public sealed record DireccionRequest(string Calle, string Ciudad, string CodigoPostal, string Pais);
 
-public sealed record LineaRequest(Guid ProductoId, string NombreProducto, decimal PrecioUnitario, int Cantidad);
+/// <summary>El nombre y el precio no viajan: los toma el servicio Catálogo.</summary>
+public sealed record LineaRequest(string ProductoId, string Categoria, int Cantidad);

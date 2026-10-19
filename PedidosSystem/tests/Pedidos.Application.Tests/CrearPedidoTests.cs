@@ -1,3 +1,4 @@
+using Pedidos.Application.Exceptions;
 using Pedidos.Application.Pedidos.Commands.CrearPedido;
 using Pedidos.Domain.Common;
 
@@ -6,8 +7,9 @@ namespace Pedidos.Application.Tests;
 public class CrearPedidoCommandHandlerTests
 {
     private readonly FakePedidoRepository _repositorio = new();
+    private readonly FakeCatalogoProductos _catalogo = new();
 
-    private CrearPedidoCommandHandler CrearHandler() => new(_repositorio, TimeProvider.System);
+    private CrearPedidoCommandHandler CrearHandler() => new(_repositorio, _catalogo, TimeProvider.System);
 
     [Fact]
     public async Task Con_datos_validos_guarda_el_pedido_y_devuelve_su_id()
@@ -57,9 +59,26 @@ public class CrearPedidoCommandValidatorTests
     {
         var comando = Comandos.CrearPedidoValido() with
         {
-            Lineas = [new LineaRequest(Guid.NewGuid(), "Teclado", 100m, 0)]
+            Lineas = [new LineaRequest("p-1", "Electro", 0)]
         };
 
         Assert.False(_validator.Validate(comando).IsValid);
+    }
+}
+
+public class CrearPedidoConProductoInexistenteTests
+{
+    [Fact]
+    public async Task Si_el_producto_no_existe_en_el_catalogo_lanza_NotFound_y_no_guarda()
+    {
+        var repositorio = new FakePedidoRepository();
+        var catalogo = new FakeCatalogoProductos();
+        catalogo.Inexistentes.Add("p-1");
+        var handler = new CrearPedidoCommandHandler(repositorio, catalogo, TimeProvider.System);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => handler.Handle(Comandos.CrearPedidoValido(), CancellationToken.None));
+
+        Assert.Empty(repositorio.Guardados);
     }
 }

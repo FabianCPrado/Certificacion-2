@@ -8,20 +8,20 @@ namespace Pedidos.Api.Controllers;
 [ApiController]
 [Route("api/blob")]
 [Tags("Blob Storage")]
-public sealed class BlobController(IProductoConsultas productos, IImagenesStorage storage) : ControllerBase
+public sealed class BlobController(ICatalogoProductos productos, IImagenesStorage storage) : ControllerBase
 {
     /// <summary>Agrega una imagen a un producto. Con el mismo nombre de archivo reemplaza a la anterior.</summary>
-    [HttpPost("imagenes/{productoId:guid}")]
+    [HttpPost("imagenes/{categoria}/{productoId}")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Subir(Guid productoId, IFormFile archivo, CancellationToken cancellationToken)
+    public async Task<IActionResult> Subir(string categoria, string productoId, IFormFile archivo, CancellationToken cancellationToken)
     {
         if (!archivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             return Problem("El archivo debe ser una imagen.", statusCode: StatusCodes.Status400BadRequest);
 
-        var producto = await productos.ObtenerPorIdAsync(productoId, cancellationToken);
+        var producto = await productos.ObtenerAsync(categoria, productoId, cancellationToken);
         if (producto is null)
             return Problem($"No existe el producto {productoId}.", statusCode: StatusCodes.Status404NotFound);
 
@@ -33,12 +33,12 @@ public sealed class BlobController(IProductoConsultas productos, IImagenesStorag
     }
 
     /// <summary>Lista todas las imágenes de un producto.</summary>
-    [HttpGet("imagenes/{productoId:guid}")]
+    [HttpGet("imagenes/{categoria}/{productoId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Listar(Guid productoId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Listar(string categoria, string productoId, CancellationToken cancellationToken)
     {
-        var producto = await productos.ObtenerPorIdAsync(productoId, cancellationToken);
+        var producto = await productos.ObtenerAsync(categoria, productoId, cancellationToken);
         if (producto is null)
             return Problem($"No existe el producto {productoId}.", statusCode: StatusCodes.Status404NotFound);
 

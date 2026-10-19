@@ -2,7 +2,6 @@
 using Pedidos.Application.Interfaces.Common;
 using Pedidos.Domain.Auditoria;
 using Pedidos.Domain.Pedidos;
-using Pedidos.Domain.Productos;
 
 namespace Pedidos.Infrastructure.Persistence;
 
@@ -14,8 +13,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     : DbContext(options), IAppDbContext
 {
     public DbSet<Pedido> Pedidos => Set<Pedido>();
-
-    public DbSet<Producto> Productos => Set<Producto>();
 
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 

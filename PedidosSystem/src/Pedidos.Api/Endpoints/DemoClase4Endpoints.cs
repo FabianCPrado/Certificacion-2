@@ -2,15 +2,11 @@
 using MediatR;
 using Pedidos.Application.Interfaces.Demo;
 using Pedidos.Application.Interfaces.Pedidos;
-using Pedidos.Application.Interfaces.Productos;
 using Pedidos.Application.Pedidos.Commands.CancelarBorradoresAntiguos;
 using Pedidos.Application.Pedidos.Commands.CrearPedido;
 using Pedidos.Application.Pedidos.Commands.CrearPedidoConStock;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
 using Pedidos.Application.Pedidos.Queries.VentasPorDia;
-using Pedidos.Application.Productos.Commands.AumentarPrecioCategoria;
-using Pedidos.Application.Productos.Commands.DescontarStock;
-using Pedidos.Application.Productos.Queries.ListarProductos;
 
 namespace Pedidos.Api.Endpoints;
 
@@ -23,8 +19,6 @@ namespace Pedidos.Api.Endpoints;
 /// </summary>
 public static class DemoClase4Endpoints
 {
-    private const int TamanioPagina = 20;
-    private const decimal PrecioMinimoDemo = 1000m;
     private const int PedidosDemo = 100;
 
     // Todos los endpoints que usan Dapper se agrupan bajo esta etiqueta en Swagger
@@ -34,7 +28,6 @@ public static class DemoClase4Endpoints
     {
         var grupo = app.MapGroup("/demo/clase4").WithTags("Demo Clase 4");
 
-        MapLinq(grupo);
         MapConsultas(grupo);
         MapRendimiento(grupo);
         MapReporte(grupo);
@@ -124,7 +117,7 @@ public static class DemoClase4Endpoints
             return Results.Ok(new { id });
         });
 
-        // BUENO: BeginTransaction en el repositorio; si falla una línea, se revierten los cambios (caso de uso CrearPedidoConStock)
+        // BUENO: si falla una línea, se devuelve el stock ya descontado en el Catálogo (caso de uso CrearPedidoConStock)
         g.MapPost("/transaccion/bueno", async (ISender sender, CrearPedidoCommand pedido, CancellationToken ct) =>
         {
             var id = await sender.Send(new CrearPedidoConStockCommand(pedido), ct);
@@ -132,23 +125,7 @@ public static class DemoClase4Endpoints
         });
     }
 
-    // 4.3 · LINQ con EF Core
-    private static void MapLinq(RouteGroupBuilder g)
-    {
-        // MALO: ToList demasiado temprano, trae toda la tabla y filtra en memoria
-        g.MapGet("/linq/malo", async (IDemoMalasPracticas malas) =>
-            await malas.ProductosFiltradosEnMemoriaAsync(PrecioMinimoDemo, TamanioPagina));
-
-        // BUENO: la base filtra, ordena y pagina (caso de uso ListarProductos)
-        g.MapGet("/linq/bueno", async (ISender sender, int pagina, CancellationToken ct) =>
-            await sender.Send(new ListarProductosQuery(pagina, TamanioPagina, PrecioMinimo: PrecioMinimoDemo), ct));
-
-        // Ver el SQL sin ejecutarlo
-        g.MapGet("/linq/sql", (IProductoConsultas consultas) =>
-            consultas.ObtenerSqlListado(1, TamanioPagina, categoria: null, PrecioMinimoDemo));
-    }
-
-    // 4.4 · Consultas, proyecciones y actualizaciones masivas
+    // 4.4 · Consultas y proyecciones
     private static void MapConsultas(RouteGroupBuilder g)
     {
         // MALO: devolver la entidad completa, con sus líneas y con tracking
@@ -158,16 +135,9 @@ public static class DemoClase4Endpoints
         // BUENO: AsNoTracking y proyección a DTO (caso de uso ListarPedidos)
         g.MapGet("/pedidos/bueno/{clienteId:guid}", async (ISender sender, Guid clienteId, CancellationToken ct) =>
             await sender.Send(new ListarPedidosQuery(1, 100, clienteId), ct));
-
-        // Actualización masiva: un UPDATE ... WHERE, sin traer los datos (comando AumentarPrecioCategoria)
-        g.MapPost("/productos/aumentar/{categoria}", async (ISender sender, string categoria, CancellationToken ct) =>
-        {
-            var filas = await sender.Send(new AumentarPrecioCategoriaCommand(categoria, 10m), ct);
-            return Results.Ok(new { filas });
-        });
     }
 
-    // 4.5 · N+1, SQL directo y procedimiento almacenado
+    // 4.5 · N+1
     private static void MapRendimiento(RouteGroupBuilder g)
     {
         // MALO: N+1 (1 consulta para los pedidos + 1 por cada pedido)
@@ -177,21 +147,6 @@ public static class DemoClase4Endpoints
         // BUENO: una sola consulta
         g.MapGet("/n1/bueno", async (IPedidosConsultas consultas, CancellationToken ct) =>
             await consultas.ListarConLineasAsync(PedidosDemo, ct));
-
-        // MALO: vulnerable a SQL injection a propósito (solo para la demo, nunca en producción)
-        g.MapGet("/sql/malo", async (IDemoMalasPracticas malas, string nombre) =>
-            await malas.ProductosPorNombreInyectableAsync(nombre));
-
-        // BUENO: el valor viaja como parámetro (@p0), no como parte del texto SQL
-        g.MapGet("/sql/bueno", async (IProductoConsultas consultas, string nombre, CancellationToken ct) =>
-            await consultas.BuscarPorNombreAsync(nombre, ct));
-
-        // Procedimiento almacenado (creado en la migración CatalogoYConsultasClase4)
-        g.MapPost("/stock/{productoId:guid}/{cantidad:int}", async (ISender sender, Guid productoId, int cantidad, CancellationToken ct) =>
-        {
-            await sender.Send(new DescontarStockCommand(productoId, cantidad), ct);
-            return Results.NoContent();
-        });
     }
 
     // 4.6 · Dapper y la capa de datos

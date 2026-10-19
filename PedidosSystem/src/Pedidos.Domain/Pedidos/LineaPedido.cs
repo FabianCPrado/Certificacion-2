@@ -3,10 +3,12 @@ using Pedidos.Domain.ValueObjects;
 
 namespace Pedidos.Domain.Pedidos;
 
-/// <summary>Entidad línea de un pedido: solo datos.</summary>
+/// <summary>Entidad línea de un pedido: solo datos. El producto vive en el servicio Catálogo y se identifica por categoría + id.</summary>
 public sealed class LineaPedido() : Entity<Guid>(Guid.NewGuid())
 {
-    public Guid ProductoId { get; set; }
+    public string ProductoId { get; set; } = null!;
+
+    public string Categoria { get; set; } = null!;
 
     public string NombreProducto { get; set; } = null!;
 

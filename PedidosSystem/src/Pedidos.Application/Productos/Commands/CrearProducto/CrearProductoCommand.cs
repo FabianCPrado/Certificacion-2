@@ -1,20 +1,16 @@
-﻿using MediatR;
-using Pedidos.Application.Interfaces.Productos;
+using MediatR;
 using Pedidos.Application.Common;
+using Pedidos.Application.Interfaces.Productos;
+using Pedidos.Application.Productos.Queries.ObtenerProducto;
 
 namespace Pedidos.Application.Productos.Commands.CrearProducto;
 
-/// <summary>Datos para crear un producto. Devuelve el Id del producto creado.</summary>
-public sealed record CrearProductoCommand(string Nombre, string Categoria, decimal Precio, int Stock) : ICommand<Guid>;
+/// <summary>Datos para crear un producto en el Catálogo. Devuelve el producto creado.</summary>
+public sealed record CrearProductoCommand(string Nombre, string Categoria, decimal Precio, int Stock) : ICommand<ProductoDto>;
 
-public sealed class CrearProductoCommandHandler(IProductoRepository productos)
-    : IRequestHandler<CrearProductoCommand, Guid>
+public sealed class CrearProductoCommandHandler(ICatalogoProductos catalogo)
+    : IRequestHandler<CrearProductoCommand, ProductoDto>
 {
-    public async Task<Guid> Handle(CrearProductoCommand request, CancellationToken cancellationToken)
-    {
-        var producto = await productos.CrearAsync(
-            request.Nombre, request.Categoria, request.Precio, request.Stock, cancellationToken);
-
-        return producto.Id;
-    }
+    public Task<ProductoDto> Handle(CrearProductoCommand request, CancellationToken cancellationToken) =>
+        catalogo.CrearAsync(request.Categoria, request.Nombre, request.Precio, request.Stock, cancellationToken);
 }

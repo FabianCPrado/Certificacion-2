@@ -6,10 +6,10 @@ public sealed class ActualizarProductoCommandValidator : AbstractValidator<Actua
 {
     public ActualizarProductoCommandValidator()
     {
+        RuleFor(c => c.Categoria).NotEmpty();
         RuleFor(c => c.ProductoId).NotEmpty();
         RuleFor(c => c.Nombre).NotEmpty().MaximumLength(200);
-        RuleFor(c => c.Categoria).NotEmpty().MaximumLength(50);
-        RuleFor(c => c.Precio).GreaterThanOrEqualTo(0);
+        RuleFor(c => c.Precio).GreaterThan(0);
         RuleFor(c => c.Stock).GreaterThanOrEqualTo(0);
     }
 }

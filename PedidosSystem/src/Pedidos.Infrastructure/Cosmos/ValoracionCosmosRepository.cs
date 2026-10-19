@@ -13,7 +13,7 @@ public sealed class ValoracionCosmosRepository(CosmosValoraciones cosmos, TimePr
         var documento = new ValoracionDocumento
         {
             Id = Guid.NewGuid().ToString(),
-            ProductoId = valoracion.ProductoId.ToString(),
+            ProductoId = valoracion.ProductoId,
             Usuario = valoracion.Usuario,
             Puntaje = valoracion.Puntaje,
             Comentario = valoracion.Comentario,

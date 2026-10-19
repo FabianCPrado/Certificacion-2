@@ -5,13 +5,13 @@ using Pedidos.Application.Interfaces.Productos;
 
 namespace Pedidos.Application.Productos.Queries.ObtenerProducto;
 
-public sealed record ObtenerProductoQuery(Guid ProductoId) : IQuery<ProductoDto>;
+public sealed record ObtenerProductoQuery(string Categoria, string ProductoId) : IQuery<ProductoDto>;
 
-/// <summary>Consulta: solo usa <see cref="IProductoConsultas"/> (lado de lectura), nunca el repositorio de escritura.</summary>
-public sealed class ObtenerProductoQueryHandler(IProductoConsultas consultas)
+/// <summary>Consulta: lee el producto del servicio Catálogo.</summary>
+public sealed class ObtenerProductoQueryHandler(ICatalogoProductos catalogo)
     : IRequestHandler<ObtenerProductoQuery, ProductoDto>
 {
     public async Task<ProductoDto> Handle(ObtenerProductoQuery request, CancellationToken cancellationToken) =>
-        await consultas.ObtenerPorIdAsync(request.ProductoId, cancellationToken)
-            ?? throw new NotFoundException($"No existe el producto {request.ProductoId}.");
+        await catalogo.ObtenerAsync(request.Categoria, request.ProductoId, cancellationToken)
+            ?? throw new NotFoundException($"No existe el producto {request.ProductoId} en la categoría {request.Categoria}.");
 }

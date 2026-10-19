@@ -20,10 +20,9 @@ using Pedidos.Infrastructure.Mongo;
 using Pedidos.Infrastructure.Persistence;
 using Pedidos.Infrastructure.Persistence.Repositories.Auditoria;
 using Pedidos.Infrastructure.Persistence.Repositories.Pedidos;
-using Pedidos.Infrastructure.Persistence.Repositories.Productos;
 using Pedidos.Infrastructure.Queries.Auditoria;
 using Pedidos.Infrastructure.Queries.Pedidos;
-using Pedidos.Infrastructure.Queries.Productos;
+using Pedidos.Infrastructure.Rest.Catalogo;
 using Pedidos.Infrastructure.Rest.Clientes;
 using Pedidos.Infrastructure.Storage;
 
@@ -51,14 +50,12 @@ public static class InfrastructureServiceExtensions
 
         // Escritura (reglas de negocio + persistencia), una por entidad
         services.AddScoped<IPedidoRepository, PedidoRepository>();
-        services.AddScoped<IProductoRepository, ProductoRepository>();
         services.AddSingleton<IAuditoriaRepository, AuditoriaMongoRepository>();   // auditoría en MongoDB
 
         // Lectura (proyecciones y SQL directo), una por entidad
         services.AddScoped<IPedidosConsultas, PedidosConsultas>();
         // Reporte con Dapper puro (procedimiento almacenado y SELECT + LINQ a objetos), sin EF Core
         services.AddScoped<IPedidosReportes, PedidosReportes>();
-        services.AddScoped<IProductoConsultas, ProductosConsultas>();
         services.AddSingleton<IAuditoriaConsultas, AuditoriaMongoConsultas>();
 
         // Clientes vive en su propio servicio (ClientesSystem), que es el único que hace el CRUD.
@@ -69,6 +66,16 @@ public static class InfrastructureServiceExtensions
         {
             http.BaseAddress = new Uri(clientesUrl);
             // Tiempo máximo de respuesta del servicio Clientes: 30 s (pasado ese tiempo la API responde 503)
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        // Los productos viven en su propio servicio (CatalogoSystem): Pedidos los lee y los modifica por REST.
+        // Application usa ICatalogoProductos y no sabe que hay HTTP detrás.
+        var catalogoUrl = configuration["Servicios:Catalogo"]
+            ?? throw new InvalidOperationException("Falta la URL del servicio Catálogo 'Servicios:Catalogo' (ver README).");
+        services.AddHttpClient<ICatalogoProductos, CatalogoRestProductos>(http =>
+        {
+            http.BaseAddress = new Uri(catalogoUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         });
 

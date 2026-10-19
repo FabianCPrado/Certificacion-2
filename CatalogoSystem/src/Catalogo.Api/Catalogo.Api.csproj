@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>catalogo-api-8d2e4b71-certificacion2</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+    <PackageReference Include="Grpc.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Contrato compartido con los clientes (p. ej. Pedidos): aqui se genera solo el lado servidor -->
+    <Protobuf Include="..\..\protos\catalogo.proto" GrpcServices="Server" Link="Protos\catalogo.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Catalogo.Application\Catalogo.Application.csproj" />
+    <ProjectReference Include="..\Catalogo.Infrastructure\Catalogo.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

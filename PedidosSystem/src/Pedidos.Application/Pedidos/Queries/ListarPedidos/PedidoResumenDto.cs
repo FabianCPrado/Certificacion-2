@@ -9,6 +9,6 @@ public sealed record PedidoResumenDto(
     string Moneda,
     DateTime CreadoEn);
 
-public sealed record LineaResumenDto(Guid ProductoId, int Cantidad);
+public sealed record LineaResumenDto(string ProductoId, int Cantidad);
 
 public sealed record PedidoConLineasDto(Guid Id, List<LineaResumenDto> Lineas);

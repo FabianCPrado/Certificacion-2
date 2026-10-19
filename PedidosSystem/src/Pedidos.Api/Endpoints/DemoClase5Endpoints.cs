@@ -23,35 +23,35 @@ public static class DemoClase5Endpoints
     private static void MapRedis(RouteGroupBuilder g)
     {
         // MALO: sin expiración
-        g.MapGet("/cache/malo/{id:guid}", async (Guid id, IDemoCache demo, CancellationToken ct) =>
-            await demo.ObtenerMaloAsync(id, ct) is { } lectura ? Results.Ok(lectura) : Results.NotFound());
+        g.MapGet("/cache/malo/{categoria}/{id}", async (string categoria, string id, IDemoCache demo, CancellationToken ct) =>
+            await demo.ObtenerMaloAsync(categoria, id, ct) is { } lectura ? Results.Ok(lectura) : Results.NotFound());
 
         // MALO: actualiza el precio y no invalida la caché
-        g.MapPut("/cache/malo/{id:guid}/precio/{precio:decimal}", async (Guid id, decimal precio, IDemoCache demo, CancellationToken ct) =>
-            await demo.ActualizarPrecioMaloAsync(id, precio, ct) ? Results.NoContent() : Results.NotFound());
+        g.MapPut("/cache/malo/{categoria}/{id}/precio/{precio:decimal}", async (string categoria, string id, decimal precio, IDemoCache demo, CancellationToken ct) =>
+            await demo.ActualizarPrecioMaloAsync(categoria, id, precio, ct) ? Results.NoContent() : Results.NotFound());
 
         // BUENO: cache-aside con expiración
-        g.MapGet("/cache/bueno/{id:guid}", async (Guid id, IDemoCache demo, CancellationToken ct) =>
-            await demo.ObtenerBuenoAsync(id, ct) is { } lectura ? Results.Ok(lectura) : Results.NotFound());
+        g.MapGet("/cache/bueno/{categoria}/{id}", async (string categoria, string id, IDemoCache demo, CancellationToken ct) =>
+            await demo.ObtenerBuenoAsync(categoria, id, ct) is { } lectura ? Results.Ok(lectura) : Results.NotFound());
 
         // BUENO: al actualizar, invalida la clave
-        g.MapPut("/cache/bueno/{id:guid}/precio/{precio:decimal}", async (Guid id, decimal precio, IDemoCache demo, CancellationToken ct) =>
-            await demo.ActualizarPrecioBuenoAsync(id, precio, ct) ? Results.NoContent() : Results.NotFound());
+        g.MapPut("/cache/bueno/{categoria}/{id}/precio/{precio:decimal}", async (string categoria, string id, decimal precio, IDemoCache demo, CancellationToken ct) =>
+            await demo.ActualizarPrecioBuenoAsync(categoria, id, precio, ct) ? Results.NoContent() : Results.NotFound());
     }
 
     // 5.3 · Blob Storage: las imágenes de un producto. Un producto puede tener varias: cada una se guarda como
     // "{productoId}/{archivo}" y se buscan todas con el prefijo "{productoId}/". La base de datos no guarda las imágenes;
-    // el producto sigue siendo el de SQL Server.
+    // el producto es el del servicio Catálogo.
     private static void MapBlob(RouteGroupBuilder g)
     {
         // Agregar una imagen a un producto que existe
-        g.MapPost("/imagenes/{productoId:guid}", async (
-            Guid productoId, IFormFile archivo, IProductoConsultas productos, IImagenesStorage storage, CancellationToken ct) =>
+        g.MapPost("/imagenes/{categoria}/{productoId}", async (
+            string categoria, string productoId, IFormFile archivo, ICatalogoProductos productos, IImagenesStorage storage, CancellationToken ct) =>
         {
             if (!archivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 return Results.Problem("El archivo debe ser una imagen.", statusCode: StatusCodes.Status400BadRequest);
 
-            var producto = await productos.ObtenerPorIdAsync(productoId, ct);
+            var producto = await productos.ObtenerAsync(categoria, productoId, ct);
             if (producto is null)
                 return Results.Problem($"No existe el producto {productoId}.", statusCode: StatusCodes.Status404NotFound);
 
@@ -65,10 +65,10 @@ public static class DemoClase5Endpoints
         }).DisableAntiforgery();
 
         // Buscar todas las imágenes de un producto
-        g.MapGet("/imagenes/{productoId:guid}", async (
-            Guid productoId, IProductoConsultas productos, IImagenesStorage storage, CancellationToken ct) =>
+        g.MapGet("/imagenes/{categoria}/{productoId}", async (
+            string categoria, string productoId, ICatalogoProductos productos, IImagenesStorage storage, CancellationToken ct) =>
         {
-            var producto = await productos.ObtenerPorIdAsync(productoId, ct);
+            var producto = await productos.ObtenerAsync(categoria, productoId, ct);
             if (producto is null)
                 return Results.Problem($"No existe el producto {productoId}.", statusCode: StatusCodes.Status404NotFound);
 

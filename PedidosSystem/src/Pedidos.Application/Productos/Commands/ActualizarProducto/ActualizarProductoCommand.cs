@@ -1,22 +1,17 @@
-﻿using MediatR;
-using Pedidos.Application.Exceptions;
-using Pedidos.Application.Interfaces.Productos;
+using MediatR;
 using Pedidos.Application.Common;
+using Pedidos.Application.Interfaces.Productos;
 
 namespace Pedidos.Application.Productos.Commands.ActualizarProducto;
 
+/// <summary>La categoría identifica al producto (junto con el id) y no se cambia.</summary>
 public sealed record ActualizarProductoCommand(
-    Guid ProductoId, string Nombre, string Categoria, decimal Precio, int Stock) : ICommand;
+    string Categoria, string ProductoId, string Nombre, decimal Precio, int Stock) : ICommand;
 
-public sealed class ActualizarProductoCommandHandler(IProductoRepository productos)
+public sealed class ActualizarProductoCommandHandler(ICatalogoProductos catalogo)
     : IRequestHandler<ActualizarProductoCommand>
 {
-    public async Task Handle(ActualizarProductoCommand request, CancellationToken cancellationToken)
-    {
-        var producto = await productos.ObtenerPorIdAsync(request.ProductoId, cancellationToken)
-            ?? throw new NotFoundException($"No existe el producto {request.ProductoId}.");
-
-        await productos.ActualizarAsync(
-            producto, request.Nombre, request.Categoria, request.Precio, request.Stock, cancellationToken);
-    }
+    public Task Handle(ActualizarProductoCommand request, CancellationToken cancellationToken) =>
+        catalogo.ActualizarAsync(
+            request.Categoria, request.ProductoId, request.Nombre, request.Precio, request.Stock, cancellationToken);
 }

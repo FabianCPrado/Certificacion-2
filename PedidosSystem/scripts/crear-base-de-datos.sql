@@ -1,4 +1,4 @@
--- Crea la base PedidosDb completa: tablas, claves, índices y procedimiento almacenado.
+-- Crea la base PedidosDb completa: tablas, claves e índices. Los productos NO están aquí: viven en CatalogoSystem (CatalogoDb).
 -- Equivale al modelo de EF Core (carpeta Persistence/MapeoEntidades). Es idempotente: se puede ejecutar varias veces.
 -- Para cargar datos de prueba, ejecutar después scripts/seed-clase4.sql.
 -- Uso (LocalDB): sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i scripts\crear-base-de-datos.sql
@@ -19,22 +19,6 @@ CREATE TABLE dbo.Clientes (
     Email   NVARCHAR(256)    NULL,
     CONSTRAINT PK_Clientes PRIMARY KEY (Id)
 );
-GO
-
--- Productos
-IF OBJECT_ID('dbo.Productos', 'U') IS NULL
-CREATE TABLE dbo.Productos (
-    Id         UNIQUEIDENTIFIER NOT NULL,
-    Nombre     NVARCHAR(200)    NULL,
-    Categoria  NVARCHAR(50)     NULL,
-    Precio     DECIMAL(18, 2)   NOT NULL,
-    Stock      INT              NOT NULL,
-    CONSTRAINT PK_Productos PRIMARY KEY (Id)
-);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Productos_Categoria' AND object_id = OBJECT_ID('dbo.Productos'))
-    CREATE INDEX IX_Productos_Categoria ON dbo.Productos (Categoria);
 GO
 
 -- Pedidos (EmailCliente y la dirección de envío son objetos de valor guardados en la misma tabla)
@@ -64,7 +48,8 @@ IF OBJECT_ID('dbo.LineasPedido', 'U') IS NULL
 CREATE TABLE dbo.LineasPedido (
     Id              UNIQUEIDENTIFIER NOT NULL,
     PedidoId        UNIQUEIDENTIFIER NOT NULL,
-    ProductoId      UNIQUEIDENTIFIER NOT NULL,
+    ProductoId      NVARCHAR(100)    NOT NULL,   -- id del producto en el servicio Catálogo
+    Categoria       NVARCHAR(100)    NOT NULL,   -- categoría del producto en el Catálogo (con el id lo identifica)
     NombreProducto  NVARCHAR(200)    NULL,
     PrecioUnitario  DECIMAL(18, 2)   NOT NULL,
     Moneda          NCHAR(3)         NOT NULL,
@@ -103,20 +88,19 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Auditoria_Ruta' AND ob
     CREATE INDEX IX_Auditoria_Ruta ON dbo.Auditoria (Ruta);
 GO
 
--- Descuenta stock de un producto (la usan PedidoRepository y ProductoRepository).
--- La condición Stock >= @Cantidad evita que el stock quede negativo si dos pedidos compiten.
-CREATE OR ALTER PROCEDURE dbo.ActualizarStock
-    @ProductoId UNIQUEIDENTIFIER,
-    @Cantidad   INT
-AS
-BEGIN
-    SET NOCOUNT ON;
+-- Bases creadas antes de mover los productos al Catálogo: las líneas pasan a guardar id string + categoría
+-- y se elimina la tabla local de productos. Es idempotente.
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.LineasPedido') AND name = 'ProductoId'
+           AND system_type_id = TYPE_ID('uniqueidentifier'))
+    ALTER TABLE dbo.LineasPedido ALTER COLUMN ProductoId NVARCHAR(100) NOT NULL;
+GO
 
-    UPDATE dbo.Productos
-    SET Stock = Stock - @Cantidad
-    WHERE Id = @ProductoId
-      AND Stock >= @Cantidad;
-END;
+IF COL_LENGTH('dbo.LineasPedido', 'Categoria') IS NULL
+    ALTER TABLE dbo.LineasPedido ADD Categoria NVARCHAR(100) NOT NULL CONSTRAINT DF_LineasPedido_Categoria DEFAULT '';
+GO
+
+DROP PROCEDURE IF EXISTS dbo.ActualizarStock;
+DROP TABLE IF EXISTS dbo.Productos;
 GO
 
 PRINT 'Base PedidosDb lista.';

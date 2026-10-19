@@ -30,19 +30,19 @@ public sealed class CacheController(ISender sender) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Obtiene un producto. La primera vez viene de SQL ("sql"); las siguientes, de Redis ("redis").</summary>
-    [HttpGet("productos/{id:guid}")]
+    /// <summary>Obtiene un producto. La primera vez viene del servicio Catálogo ("catalogo"); las siguientes, de Redis ("redis").</summary>
+    [HttpGet("productos/{categoria}/{id}")]
     [ProducesResponseType<ProductoCacheadoDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Obtener(Guid id, CancellationToken cancellationToken) =>
-        Ok(await sender.Send(new ObtenerProductoCacheadoQuery(id), cancellationToken));
+    public async Task<IActionResult> Obtener(string categoria, string id, CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new ObtenerProductoCacheadoQuery(categoria, id), cancellationToken));
 
-    /// <summary>Saca el producto del caché: la siguiente lectura vuelve a SQL.</summary>
-    [HttpDelete("productos/{id:guid}")]
+    /// <summary>Saca el producto del caché: la siguiente lectura vuelve al Catálogo.</summary>
+    [HttpDelete("productos/{categoria}/{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Invalidar(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Invalidar(string categoria, string id, CancellationToken cancellationToken)
     {
-        await sender.Send(new InvalidarCacheProductoCommand(id), cancellationToken);
+        await sender.Send(new InvalidarCacheProductoCommand(categoria, id), cancellationToken);
         return NoContent();
     }
 }

@@ -45,52 +45,13 @@ public sealed class PedidoRepository(AppDbContext context) : IPedidoRepository
         var pedido = Crear(clienteId, emailCliente, direccionEnvio, moneda, creadoEn);
 
         foreach (var linea in lineas)
-            AgregarLinea(pedido, linea.ProductoId, linea.NombreProducto, linea.PrecioUnitario, linea.Cantidad);
+            AgregarLinea(pedido, linea.ProductoId, linea.Categoria, linea.NombreProducto, linea.PrecioUnitario, linea.Cantidad);
 
         await context.SaveChangesAsync(cancellationToken);
         return pedido;
     }
 
-    public async Task<Pedido> CrearYDescontarStockAsync(
-        Guid clienteId, Email emailCliente, Direccion direccionEnvio, string moneda, DateTime creadoEn,
-        IReadOnlyList<LineaNueva> lineas, CancellationToken cancellationToken = default)
-    {
-        // Transacción explícita: los SaveChanges y el procedimiento almacenado de abajo comparten la misma
-        // conexión y transacción. Se confirman juntos (Commit) o no queda nada (Rollback).
-        await using var transaccion = await context.Database.BeginTransactionAsync(cancellationToken);
-
-        try
-        {
-            var pedido = await CrearAsync(clienteId, emailCliente, direccionEnvio, moneda, creadoEn, lineas, cancellationToken);
-
-            foreach (var linea in lineas)
-                await DescontarStockAsync(linea.ProductoId, linea.Cantidad, cancellationToken);
-
-            await transaccion.CommitAsync(cancellationToken);
-            return pedido;
-        }
-        catch
-        {
-            await transaccion.RollbackAsync(cancellationToken);
-            throw;
-        }
-    }
-
-    private async Task DescontarStockAsync(Guid productoId, int cantidad, CancellationToken cancellationToken)
-    {
-        var stock = await context.Productos
-            .Where(p => p.Id == productoId)
-            .Select(p => (int?)p.Stock)
-            .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new ReglaNegocioException($"No existe el producto {productoId}.");
-
-        if (stock < cantidad)
-            throw new ReglaNegocioException($"No hay stock suficiente del producto {productoId}.");
-
-        await context.Database.ExecuteSqlAsync($"EXEC ActualizarStock {productoId}, {cantidad}", cancellationToken);
-    }
-
-    public void AgregarLinea(Pedido pedido, Guid productoId, string nombreProducto, Dinero precioUnitario, int cantidad)
+    public void AgregarLinea(Pedido pedido, string productoId, string categoria, string nombreProducto, Dinero precioUnitario, int cantidad)
     {
         if (pedido.Estado != EstadoPedido.Borrador)
             throw new ReglaNegocioException("Solo se puede modificar un pedido en borrador.");
@@ -107,6 +68,7 @@ public sealed class PedidoRepository(AppDbContext context) : IPedidoRepository
             pedido.Lineas.Add(new LineaPedido
             {
                 ProductoId = productoId,
+                Categoria = categoria,
                 NombreProducto = nombreProducto,
                 PrecioUnitario = precioUnitario,
                 Cantidad = cantidad

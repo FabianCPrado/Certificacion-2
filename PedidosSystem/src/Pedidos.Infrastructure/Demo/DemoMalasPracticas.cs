@@ -4,7 +4,7 @@ using Pedidos.Application.Interfaces.Pedidos;
 using Pedidos.Application.Pedidos.Commands.CrearPedido;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
 using Pedidos.Application.Pedidos.Queries.VentasPorDia;
-using Pedidos.Application.Productos.Queries.ObtenerProducto;
+using Pedidos.Application.Interfaces.Productos;
 using Pedidos.Domain.Common;
 using Pedidos.Domain.Pedidos;
 using Pedidos.Infrastructure.Persistence;
@@ -12,26 +12,13 @@ using Pedidos.Infrastructure.Persistence;
 namespace Pedidos.Infrastructure.Demo;
 
 // Cada método de esta clase está MAL a propósito (Clase 4): sirve para compararlo con la versión buena
-// (ProductosConsultas, PedidosConsultas, ProductoRepository) mirando el SQL y los tiempos en la consola.
+// (PedidosConsultas, PedidoRepository) mirando el SQL y los tiempos en la consola.
 // S2077 / EF1002 / EF1003 (SQL concatenado) y S3267 (consulta dentro de un bucle) se desactivan solo aquí.
 #pragma warning disable S2077, S3267, EF1002, EF1003
 
 /// <summary>Versiones "malas" de las prácticas de la Clase 4. No la usa ningún caso de uso real.</summary>
-public sealed class DemoMalasPracticas(AppDbContext context, IPedidoRepository repositorioPedidos) : IDemoMalasPracticas
+public sealed class DemoMalasPracticas(AppDbContext context, IPedidoRepository repositorioPedidos, ICatalogoProductos catalogo) : IDemoMalasPracticas
 {
-    public async Task<IReadOnlyList<ProductoDto>> ProductosFiltradosEnMemoriaAsync(decimal precioMinimo, int cantidad)
-    {
-        // MAL: ToList antes de filtrar. Trae las 50.000 filas y filtra, ordena y corta en memoria.
-        var todos = await context.Productos.ToListAsync();
-
-        return todos
-            .Where(p => p.Precio >= precioMinimo)
-            .OrderBy(p => p.Nombre)
-            .Take(cantidad)
-            .Select(p => new ProductoDto(p.Id, p.Nombre, p.Categoria, p.Precio, p.Stock))
-            .ToList();
-    }
-
     public async Task<IReadOnlyList<Pedido>> PedidosDelClienteComoEntidadAsync(Guid clienteId) =>
         // MAL: devuelve la entidad completa, con todas las columnas, las líneas y tracking
         await context.Pedidos
@@ -62,13 +49,6 @@ public sealed class DemoMalasPracticas(AppDbContext context, IPedidoRepository r
         return resultado;
     }
 
-    public async Task<IReadOnlyList<ProductoDto>> ProductosPorNombreInyectableAsync(string nombre) =>
-        // MAL: el valor del usuario se concatena dentro del SQL (SQL injection)
-        // RelationalQueryableExtensions explícito: el proveedor de EF Core para Cosmos (Clase 5) define otro FromSqlRaw y la llamada sería ambigua
-        await RelationalQueryableExtensions.FromSqlRaw(context.Productos, "SELECT * FROM Productos WHERE Nombre = '" + nombre + "'")
-            .Select(p => new ProductoDto(p.Id, p.Nombre, p.Categoria, p.Precio, p.Stock))
-            .ToListAsync();
-
     public async Task<IReadOnlyList<VentaPorDiaDto>> VentasPorDiaEnMemoriaAsync()
     {
         // MAL: trae todos los pedidos con sus líneas y agrupa en memoria lo que la base haría con un GROUP BY
@@ -88,25 +68,15 @@ public sealed class DemoMalasPracticas(AppDbContext context, IPedidoRepository r
     public async Task<Guid> CrearPedidoYDescontarStockSinTransaccionAsync(CrearPedidoCommand comando, DateTime creadoEn)
     {
         // Paso 1: guarda el pedido con sus líneas (queda confirmado en la base)
+        var lineas = await catalogo.ResolverLineasAsync(comando, CancellationToken.None);
         var pedido = await repositorioPedidos.CrearAsync(
             comando.ClienteId, comando.ToEmail(), comando.ToDireccion(), comando.Moneda,
-            creadoEn, comando.ToLineasNuevas());
+            creadoEn, lineas);
 
-        // Paso 2: descuenta el stock línea por línea. MAL: sin transacción, si una línea falla
+        // Paso 2: descuenta el stock línea por línea en el Catálogo. MAL: sin compensación, si una línea falla
         // el pedido y el stock de las líneas anteriores ya quedaron guardados.
-        foreach (var linea in comando.Lineas)
-        {
-            var stock = await context.Productos
-                .Where(p => p.Id == linea.ProductoId)
-                .Select(p => (int?)p.Stock)
-                .FirstOrDefaultAsync()
-                ?? throw new ReglaNegocioException($"No existe el producto {linea.ProductoId}.");
-
-            if (stock < linea.Cantidad)
-                throw new ReglaNegocioException($"No hay stock suficiente del producto {linea.ProductoId}.");
-
-            await context.Database.ExecuteSqlAsync($"EXEC ActualizarStock {linea.ProductoId}, {linea.Cantidad}");
-        }
+        foreach (var linea in lineas)
+            await catalogo.DescontarStockAsync(linea.Categoria, linea.ProductoId, linea.Cantidad);
 
         return pedido.Id;
     }

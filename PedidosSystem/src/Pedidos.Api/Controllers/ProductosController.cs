@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Pedidos.Application.Common;
 using Pedidos.Application.Productos.Commands.ActualizarProducto;
 using Pedidos.Application.Productos.Commands.CrearProducto;
 using Pedidos.Application.Productos.Commands.EliminarProducto;
@@ -11,76 +10,70 @@ using Pedidos.Application.Productos.Queries.ObtenerProducto;
 namespace Pedidos.Api.Controllers;
 
 /// <summary>
-/// El controlador no tiene lógica: envía cada request por MediatR (validación → handler)
-/// y devuelve la respuesta HTTP. Los errores los traduce <see cref="Infrastructure.GlobalExceptionHandler"/>.
+/// Los productos no viven en Pedidos: este controlador llama al servicio Catálogo (CatalogoSystem) por REST.
+/// No tiene lógica: envía cada request por MediatR (validación → handler) y devuelve la respuesta HTTP.
+/// Un producto se identifica por categoría + id. Los errores los traduce <see cref="Infrastructure.GlobalExceptionHandler"/>.
 /// </summary>
 [ApiController]
 [Route("api/productos")]
 public sealed class ProductosController(ISender sender) : ControllerBase
 {
-    /// <summary>Crea un producto.</summary>
+    /// <summary>Crea un producto en el Catálogo.</summary>
     [HttpPost]
-    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProductoDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Crear(CrearProductoCommand command, CancellationToken cancellationToken)
     {
-        var id = await sender.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(Obtener), new { id }, id);
+        var producto = await sender.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(Obtener), new { categoria = producto.Categoria, id = producto.Id }, producto);
     }
 
-    /// <summary>Lista los productos (paginado), opcionalmente por categoría y precio mínimo.</summary>
+    /// <summary>Lista los productos de una categoría (de a 20 por página).</summary>
     [HttpGet]
-    [ProducesResponseType<PagedResult<ProductoDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<IReadOnlyList<ProductoDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Listar(
-        [FromQuery] string? categoria, [FromQuery] decimal? precioMinimo, CancellationToken cancellationToken,
-        [FromQuery] int pagina = 1, [FromQuery] int tamanio = 20)
-    {
-        var productos = await sender.Send(
-            new ListarProductosQuery(pagina, tamanio, categoria, precioMinimo), cancellationToken);
-        return Ok(productos);
-    }
+        [FromQuery] string categoria, CancellationToken cancellationToken, [FromQuery] int pagina = 1) =>
+        Ok(await sender.Send(new ListarProductosQuery(categoria, pagina), cancellationToken));
 
     /// <summary>Obtiene un producto.</summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{categoria}/{id}")]
     [ProducesResponseType<ProductoDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Obtener(Guid id, CancellationToken cancellationToken)
-    {
-        var producto = await sender.Send(new ObtenerProductoQuery(id), cancellationToken);
-        return Ok(producto);
-    }
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Obtener(string categoria, string id, CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new ObtenerProductoQuery(categoria, id), cancellationToken));
 
-    /// <summary>Cambia los datos de un producto.</summary>
-    [HttpPut("{id:guid}")]
+    /// <summary>Cambia nombre, precio y stock de un producto.</summary>
+    [HttpPut("{categoria}/{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Actualizar(
-        Guid id, ActualizarProductoRequest request, CancellationToken cancellationToken)
+        string categoria, string id, ActualizarProductoRequest request, CancellationToken cancellationToken)
     {
         await sender.Send(
-            new ActualizarProductoCommand(id, request.Nombre, request.Categoria, request.Precio, request.Stock),
-            cancellationToken);
+            new ActualizarProductoCommand(categoria, id, request.Nombre, request.Precio, request.Stock), cancellationToken);
         return NoContent();
     }
 
     /// <summary>Elimina un producto.</summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{categoria}/{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancellationToken)
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Eliminar(string categoria, string id, CancellationToken cancellationToken)
     {
-        await sender.Send(new EliminarProductoCommand(id), cancellationToken);
+        await sender.Send(new EliminarProductoCommand(categoria, id), cancellationToken);
         return NoContent();
     }
 }
 
-/// <summary>Cuerpo de PUT /api/productos/{id}: el Id viaja en la ruta.</summary>
+/// <summary>Cuerpo de PUT /api/productos/{categoria}/{id}: la categoría y el id viajan en la ruta.</summary>
 public sealed record ActualizarProductoRequest(
     string Nombre,
-    string Categoria,
     [property: JsonRequired] decimal Precio,
     [property: JsonRequired] int Stock);

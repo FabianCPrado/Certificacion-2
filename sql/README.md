@@ -1,12 +1,12 @@
-# Scripts SQL
+﻿# Scripts SQL
 
 Scripts para crear las dos bases de datos del proyecto en **SQL Server LocalDB** (`(localdb)\MSSQLLocalDB`). Todos son **idempotentes**: se pueden ejecutar varias veces sin duplicar nada.
 
 | Orden | Archivo | Qué hace | Base |
 |---|---|---|---|
-| 1 | [`01-PedidosDb-crear.sql`](01-PedidosDb-crear.sql) | Crea la base `PedidosDb` con sus tablas, claves e índices (`Clientes`, `Productos`, `Pedidos`, `LineasPedido`, `Auditoria`) y el procedimiento `ActualizarStock` | PedidosDb |
-| 2 | [`02-PedidosDb-procedimientos.sql`](02-PedidosDb-procedimientos.sql) | Procedimientos almacenados de la clase 4: `ActualizarStock`, `CancelarBorradoresAntiguos` y `ObtenerVentasPorDia` | PedidosDb |
-| 3 | [`03-PedidosDb-datos-de-prueba.sql`](03-PedidosDb-datos-de-prueba.sql) | Datos de prueba: 50.000 productos, 100 clientes y 1.000 pedidos con 3 líneas cada uno. Si ya hay productos, no hace nada | PedidosDb |
+| 1 | [`01-PedidosDb-crear.sql`](01-PedidosDb-crear.sql) | Crea la base `PedidosDb` con sus tablas, claves e índices (`Clientes`, `Pedidos`, `LineasPedido`, `Auditoria`). Los productos ya no están aquí: viven en CatalogoSystem (`CatalogoDb`). Si la base ya existía, migra `LineasPedido` (id de producto en texto + `Categoria`) y elimina `Productos` | PedidosDb |
+| 2 | [`02-PedidosDb-procedimientos.sql`](02-PedidosDb-procedimientos.sql) | Procedimientos almacenados de la clase 4: `CancelarBorradoresAntiguos` y `ObtenerVentasPorDia` | PedidosDb |
+| 3 | [`03-PedidosDb-datos-de-prueba.sql`](03-PedidosDb-datos-de-prueba.sql) | Datos de prueba: 100 clientes y 1.000 pedidos con 3 líneas cada uno (los productos de las líneas son ids de ejemplo). Si ya hay clientes, no hace nada | PedidosDb |
 | 4 | [`04-ClientesDb-crear.sql`](04-ClientesDb-crear.sql) | Crea la base `ClientesDb` con la tabla `Clientes` y un índice único por email. Si `PedidosDb` ya tiene clientes, los copia con el mismo `Id` | ClientesDb |
 
 El orden importa en dos puntos:
@@ -52,7 +52,7 @@ Conéctate al servidor `(localdb)\MSSQLLocalDB` con autenticación de Windows y 
 ## Comprobar que quedó bien
 
 ```sql
-SELECT COUNT(*) AS Productos FROM PedidosDb.dbo.Productos;   -- 50000 con los datos de prueba
+SELECT COUNT(*) AS Pedidos   FROM PedidosDb.dbo.Pedidos;     -- 1000 con los datos de prueba
 SELECT COUNT(*) AS Clientes  FROM ClientesDb.dbo.Clientes;   -- 100 con los datos de prueba
 ```
 
@@ -74,5 +74,7 @@ Ya están en los `appsettings.Development.json` de cada API:
 |---|---|
 | Pedidos | `Server=(localdb)\MSSQLLocalDB;Database=PedidosDb;Trusted_Connection=True;TrustServerCertificate=True` |
 | Clientes | `Server=(localdb)\MSSQLLocalDB;Database=ClientesDb;Trusted_Connection=True;TrustServerCertificate=True` |
+| Catálogo | `Server=(localdb)\MSSQLLocalDB;Database=CatalogoDb;Trusted_Connection=True;TrustServerCertificate=True` (la base y la tabla las crea la API sola al arrancar en Development) |
 
 > Redis, MongoDB, Cosmos DB y Blob Storage **no** usan estos scripts: se levantan con Docker. Ver [`PedidosSystem/docs/INSTALACION-DOCKER.md`](../PedidosSystem/docs/INSTALACION-DOCKER.md).
+

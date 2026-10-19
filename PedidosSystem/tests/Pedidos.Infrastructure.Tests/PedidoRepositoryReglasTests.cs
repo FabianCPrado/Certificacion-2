@@ -45,7 +45,7 @@ public class PedidoRepositoryReglasTests
     {
         var pedido = NuevoPedido();
 
-        Assert.Throws<ReglaNegocioException>(() => _repositorio.AgregarLinea(pedido, Guid.NewGuid(), "Teclado", Pesos(100), cantidad));
+        Assert.Throws<ReglaNegocioException>(() => _repositorio.AgregarLinea(pedido, Guid.NewGuid().ToString(), "Electro", "Teclado", Pesos(100), cantidad));
         Assert.Empty(pedido.Lineas);
     }
 
@@ -55,17 +55,17 @@ public class PedidoRepositoryReglasTests
         var pedido = NuevoPedido();
 
         Assert.Throws<ReglaNegocioException>(
-            () => _repositorio.AgregarLinea(pedido, Guid.NewGuid(), "Teclado", new Dinero(10, "USD"), 1));
+            () => _repositorio.AgregarLinea(pedido, Guid.NewGuid().ToString(), "Electro", "Teclado", new Dinero(10, "USD"), 1));
     }
 
     [Fact]
     public void AgregarLinea_del_mismo_producto_suma_la_cantidad()
     {
         var pedido = NuevoPedido();
-        var productoId = Guid.NewGuid();
+        var productoId = Guid.NewGuid().ToString();
 
-        _repositorio.AgregarLinea(pedido, productoId, "Teclado", Pesos(100), 2);
-        _repositorio.AgregarLinea(pedido, productoId, "Teclado", Pesos(100), 3);
+        _repositorio.AgregarLinea(pedido, productoId, "Electro", "Teclado", Pesos(100), 2);
+        _repositorio.AgregarLinea(pedido, productoId, "Electro", "Teclado", Pesos(100), 3);
 
         var linea = Assert.Single(pedido.Lineas);
         Assert.Equal(5, linea.Cantidad);
@@ -84,7 +84,7 @@ public class PedidoRepositoryReglasTests
     public void Confirmar_cambia_el_estado_a_Confirmado()
     {
         var pedido = NuevoPedido();
-        _repositorio.AgregarLinea(pedido, Guid.NewGuid(), "Teclado", Pesos(100), 1);
+        _repositorio.AgregarLinea(pedido, Guid.NewGuid().ToString(), "Electro", "Teclado", Pesos(100), 1);
 
         _repositorio.Confirmar(pedido);
 
@@ -95,11 +95,11 @@ public class PedidoRepositoryReglasTests
     public void Un_pedido_confirmado_no_admite_nuevas_lineas()
     {
         var pedido = NuevoPedido();
-        _repositorio.AgregarLinea(pedido, Guid.NewGuid(), "Teclado", Pesos(100), 1);
+        _repositorio.AgregarLinea(pedido, Guid.NewGuid().ToString(), "Electro", "Teclado", Pesos(100), 1);
         _repositorio.Confirmar(pedido);
 
         Assert.Throws<ReglaNegocioException>(
-            () => _repositorio.AgregarLinea(pedido, Guid.NewGuid(), "Mouse", Pesos(50), 1));
+            () => _repositorio.AgregarLinea(pedido, Guid.NewGuid().ToString(), "Electro", "Mouse", Pesos(50), 1));
     }
 
     [Fact]

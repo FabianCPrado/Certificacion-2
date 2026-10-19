@@ -5,7 +5,7 @@ using Pedidos.Application.Interfaces.Valoraciones;
 
 namespace Pedidos.Application.Valoraciones.Commands.CrearValoracion;
 
-public sealed record CrearValoracionCommand(Guid ProductoId, string Usuario, int Puntaje, string? Comentario)
+public sealed record CrearValoracionCommand(string ProductoId, string Usuario, int Puntaje, string? Comentario)
     : ICommand<Guid>;
 
 public sealed class CrearValoracionCommandValidator : AbstractValidator<CrearValoracionCommand>

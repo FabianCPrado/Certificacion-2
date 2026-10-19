@@ -12,7 +12,7 @@ public sealed record PedidoDto(
     IReadOnlyList<LineaPedidoDto> Lineas);
 
 public sealed record LineaPedidoDto(
-    Guid ProductoId,
+    string ProductoId,
     string NombreProducto,
     decimal PrecioUnitario,
     int Cantidad,

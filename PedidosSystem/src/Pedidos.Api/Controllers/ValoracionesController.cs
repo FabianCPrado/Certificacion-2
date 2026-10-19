@@ -22,9 +22,9 @@ public sealed class ValoracionesController(ISender sender) : ControllerBase
     }
 
     /// <summary>Lista las valoraciones de un producto, con su cantidad y promedio.</summary>
-    [HttpGet("{productoId:guid}")]
+    [HttpGet("{productoId}")]
     [ProducesResponseType<ValoracionesProductoDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Listar(Guid productoId, CancellationToken cancellationToken) =>
+    public async Task<IActionResult> Listar(string productoId, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new ListarValoracionesQuery(productoId), cancellationToken));
 }
 

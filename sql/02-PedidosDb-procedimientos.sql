@@ -1,13 +1,5 @@
 -- Procedimientos almacenados de la Clase 4 (base PedidosDb). Se pueden ejecutar varias veces (CREATE OR ALTER).
 
--- Descuenta stock de un producto. Lo llama ProductoRepository con EF Core (ExecuteSqlAsync).
-CREATE OR ALTER PROCEDURE ActualizarStock
-    @ProductoId UNIQUEIDENTIFIER,
-    @Cantidad INT
-AS
-    UPDATE Productos SET Stock = Stock - @Cantidad WHERE Id = @ProductoId;
-GO
-
 -- Cancela los pedidos en borrador con más de @Dias días sin confirmarse y devuelve cuántos canceló
 -- en el parámetro de salida @Cancelados. Lo llama PedidoRepository con Dapper (ExecuteAsync).
 CREATE OR ALTER PROCEDURE CancelarBorradoresAntiguos

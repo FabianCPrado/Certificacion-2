@@ -5,13 +5,13 @@ using Pedidos.Application.Interfaces.Valoraciones;
 namespace Pedidos.Application.Valoraciones.Queries.ListarValoraciones;
 
 /// <summary>Una valoración de un producto. Solo transporta datos: no tiene lógica.</summary>
-public sealed record ValoracionDto(Guid Id, Guid ProductoId, string Usuario, int Puntaje, string? Comentario, DateTime FechaUtc);
+public sealed record ValoracionDto(Guid Id, string ProductoId, string Usuario, int Puntaje, string? Comentario, DateTime FechaUtc);
 
 /// <summary>Las valoraciones de un producto con su cantidad y promedio.</summary>
 public sealed record ValoracionesProductoDto(
-    Guid ProductoId, int Cantidad, double Promedio, IReadOnlyList<ValoracionDto> Valoraciones);
+    string ProductoId, int Cantidad, double Promedio, IReadOnlyList<ValoracionDto> Valoraciones);
 
-public sealed record ListarValoracionesQuery(Guid ProductoId) : IQuery<ValoracionesProductoDto>;
+public sealed record ListarValoracionesQuery(string ProductoId) : IQuery<ValoracionesProductoDto>;
 
 /// <summary>Consulta: solo usa <see cref="IValoracionConsultas"/> (lado de lectura), nunca el repositorio.</summary>
 public sealed class ListarValoracionesQueryHandler(IValoracionConsultas consultas)

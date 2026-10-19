@@ -8,26 +8,27 @@ using Pedidos.Domain.Common;
 namespace Pedidos.Infrastructure.Rest.Clientes;
 
 /// <summary>
-/// Traduce las respuestas del servicio Clientes a las mismas excepciones que antes lanzaba la base local,
+/// Traduce las respuestas de un servicio REST (Clientes, Catálogo) a las mismas excepciones que antes lanzaba la base local,
 /// para que Application y la API no noten el cambio: 400 → ValidationException · 404 → NotFoundException ·
 /// 409 → ReglaNegocioException · otro error → HttpRequestException (la API responde 503).
 /// </summary>
 internal static class ClientesRestRespuestas
 {
-    public static async Task AsegurarExitoAsync(HttpResponseMessage respuesta, CancellationToken cancellationToken)
+    public static async Task AsegurarExitoAsync(
+        HttpResponseMessage respuesta, CancellationToken cancellationToken, string servicio = "Clientes")
     {
         if (respuesta.IsSuccessStatusCode)
             return;
 
         var cuerpo = await respuesta.Content.ReadAsStringAsync(cancellationToken);
-        var detalle = LeerDetalle(cuerpo) ?? respuesta.ReasonPhrase ?? "Error en el servicio Clientes.";
+        var detalle = LeerDetalle(cuerpo) ?? respuesta.ReasonPhrase ?? $"Error en el servicio {servicio}.";
 
         throw respuesta.StatusCode switch
         {
             HttpStatusCode.BadRequest => new ValidationException(LeerErrores(cuerpo, detalle)),
             HttpStatusCode.NotFound => new NotFoundException(detalle),
             HttpStatusCode.Conflict => new ReglaNegocioException(detalle),
-            _ => new HttpRequestException($"El servicio Clientes respondió {(int)respuesta.StatusCode}: {detalle}")
+            _ => new HttpRequestException($"El servicio {servicio} respondió {(int)respuesta.StatusCode}: {detalle}")
         };
     }
 

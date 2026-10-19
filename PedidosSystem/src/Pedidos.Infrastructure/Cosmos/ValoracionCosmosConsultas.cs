@@ -8,10 +8,10 @@ namespace Pedidos.Infrastructure.Cosmos;
 public sealed class ValoracionCosmosConsultas(CosmosValoraciones cosmos) : IValoracionConsultas
 {
     public async Task<IReadOnlyList<ValoracionDto>> ListarPorProductoAsync(
-        Guid productoId, CancellationToken cancellationToken = default)
+        string productoId, CancellationToken cancellationToken = default)
     {
         var contenedor = await cosmos.ObtenerContenedorAsync(cancellationToken);
-        var clave = productoId.ToString();
+        var clave = productoId;
 
         var consulta = new QueryDefinition("SELECT * FROM c WHERE c.productoId = @productoId ORDER BY c.fechaUtc DESC")
             .WithParameter("@productoId", clave);
@@ -25,7 +25,7 @@ public sealed class ValoracionCosmosConsultas(CosmosValoraciones cosmos) : IValo
         {
             var pagina = await iterador.ReadNextAsync(cancellationToken);
             resultado.AddRange(pagina.Select(d => new ValoracionDto(
-                Guid.Parse(d.Id), Guid.Parse(d.ProductoId), d.Usuario, d.Puntaje, d.Comentario, d.FechaUtc)));
+                Guid.Parse(d.Id), d.ProductoId, d.Usuario, d.Puntaje, d.Comentario, d.FechaUtc)));
         }
 
         return resultado;

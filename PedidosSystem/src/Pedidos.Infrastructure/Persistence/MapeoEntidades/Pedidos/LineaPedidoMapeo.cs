@@ -14,6 +14,8 @@ public sealed class LineaPedidoMapeo : IEntityTypeConfiguration<LineaPedido>
         // El Id lo genera el dominio: así EF detecta las líneas nuevas como Added
         builder.Property(l => l.Id).ValueGeneratedNever();
 
+        builder.Property(l => l.ProductoId).HasMaxLength(100);
+        builder.Property(l => l.Categoria).HasMaxLength(100);
         builder.Property(l => l.NombreProducto).HasMaxLength(200);
 
         builder.OwnsOne(l => l.PrecioUnitario, precio =>

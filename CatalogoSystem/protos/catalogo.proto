@@ -1,0 +1,12 @@
+syntax = "proto3";
+option csharp_namespace = "Catalogo.Grpc";
+package catalogo;
+
+service CatalogoService {
+  rpc ObtenerPrecioYStock (ProductoRequest) returns (PrecioYStockReply);
+  rpc SeguirStock         (ProductoRequest) returns (stream StockReply);   // streaming del servidor (opcional)
+}
+
+message ProductoRequest   { string producto_id = 1; string categoria = 2; }
+message PrecioYStockReply { string producto_id = 1; double precio = 2; int32 stock = 3; }
+message StockReply        { int32 stock = 1; }
