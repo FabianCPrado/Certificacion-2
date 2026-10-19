@@ -1,0 +1,9 @@
+{
+  "clienteId": "8c6f4a52-1b3e-4f0a-9a7d-2f1c3e5b7d90",
+  "emailCliente": "ana@ejemplo.com",
+  "direccion": { "calle": "Calle 100 # 15-20", "ciudad": "Bogotá", "codigoPostal": "110111", "pais": "Colombia" },
+  "moneda": "COP",
+  "lineas": [
+    { "productoId": "0f8fad5b-d9cb-469f-a165-70867728950e", "nombreProducto": "Teclado", "precioUnitario": 150000, "cantidad": 2 }
+  ]
+}

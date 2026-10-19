@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>pedidos-api-3f6c2a1e-certificacion2</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+    <!-- Necesario para dotnet ef migrations (proyecto de inicio) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pedidos.Application\Pedidos.Application.csproj" />
+    <ProjectReference Include="..\Pedidos.Infrastructure\Pedidos.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

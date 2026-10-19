@@ -1,0 +1,10 @@
+{
+  "clienteId": "11111111-2222-3333-4444-555555555555",
+  "emailCliente": "carlos@ejemplo.com",
+  "direccion": { "calle": "Av. Siempre Viva 742", "ciudad": "Medellín", "codigoPostal": "050001", "pais": "Colombia" },
+  "moneda": "USD",
+  "lineas": [
+    { "productoId": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "nombreProducto": "Mouse", "precioUnitario": 15.50, "cantidad": 1 },
+    { "productoId": "9b2e4c1a-5d3f-4e6a-8c7b-1a2b3c4d5e6f", "nombreProducto": "Monitor", "precioUnitario": 220.99, "cantidad": 3 }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "clienteId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "emailCliente": "lucia@ejemplo.com",
+  "direccion": { "calle": "Carrera 7 # 32-16", "ciudad": "Cali", "codigoPostal": "", "pais": "Colombia" },
+  "moneda": "COP",
+  "lineas": [
+    { "productoId": "0f8fad5b-d9cb-469f-a165-70867728950e", "nombreProducto": "Cable HDMI", "precioUnitario": 0, "cantidad": 5 }
+  ]
+}

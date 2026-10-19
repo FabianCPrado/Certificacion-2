@@ -1,0 +1,21 @@
+﻿<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Clientes.Domain/Clientes.Domain.csproj" />
+    <Project Path="src/Clientes.Application/Clientes.Application.csproj" />
+    <Project Path="src/Clientes.Infrastructure/Clientes.Infrastructure.csproj" />
+    <Project Path="src/Clientes.Api/Clientes.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Clientes.Domain.Tests/Clientes.Domain.Tests.csproj" />
+    <Project Path="tests/Clientes.Application.Tests/Clientes.Application.Tests.csproj" />
+    <Project Path="tests/Clientes.Infrastructure.Tests/Clientes.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
+

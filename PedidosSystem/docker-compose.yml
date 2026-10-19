@@ -1,0 +1,64 @@
+# Servicios locales para las demos: docker compose up -d
+#   Redis Insight (interfaz de Redis):  http://localhost:5540  → Add Redis database → host "redis", puerto 6379
+#   Mongo Express (interfaz de MongoDB): http://localhost:8081
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+
+  # MongoDB: guarda la auditoría (base PedidosDb, colección "auditoria"). Los datos persisten en un volumen.
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongo
+
+  # Azurite: emulador local de Azure Storage. Se usa Blob (imágenes de productos) en el puerto 10000.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    # --skipApiVersionCheck: el SDK de Azure suele usar una versión de API más nueva que la que conoce Azurite
+    command: azurite --skipApiVersionCheck --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data
+    ports:
+      - "10000:10000"   # Blob
+      - "10001:10001"   # Queue
+      - "10002:10002"   # Table
+    volumes:
+      - azurite-data:/data
+
+  # Cosmos DB (emulador vNext): catálogo y valoraciones. El SDK de .NET exige HTTPS (certificado autofirmado).
+  # Puerto 8083 y no 8081: el 8081 ya lo usa Mongo Express. Data Explorer: http://localhost:1234
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
+    ports:
+      - "8083:8083"
+      - "1234:1234"
+    environment:
+      PORT: "8083"
+      PROTOCOL: https
+      ENABLE_TELEMETRY: "false"
+    volumes:
+      - cosmos-data:/data
+
+volumes:
+  mongo-data:
+  cosmos-data:
+  azurite-data:

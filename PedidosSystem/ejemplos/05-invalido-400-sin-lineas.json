@@ -1,0 +1,7 @@
+{
+  "clienteId": "00000000-0000-0000-0000-000000000000",
+  "emailCliente": "ana@ejemplo.com",
+  "direccion": { "calle": "Calle 1", "ciudad": "Bogotá", "codigoPostal": "110111", "pais": "Colombia" },
+  "moneda": "CO",
+  "lineas": []
+}
