@@ -1,0 +1,12 @@
+@baseUrl = https://localhost:7401
+@clientId = pedidos-service
+@clientSecret = REPLACE_WITH_PEDIDOS_CLIENT_SECRET_FROM_USER_SECRETS
+
+### Obtener JWT para Pedidos
+POST {{baseUrl}}/api/tokens
+Content-Type: application/json
+
+{
+  "clientId": "{{clientId}}",
+  "clientSecret": "{{clientSecret}}"
+}

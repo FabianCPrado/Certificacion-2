@@ -73,11 +73,20 @@ public static class InfrastructureServiceExtensions
         // Application usa ICatalogoProductos y no sabe que hay HTTP detrás.
         var catalogoUrl = configuration["Servicios:Catalogo"]
             ?? throw new InvalidOperationException("Falta la URL del servicio Catálogo 'Servicios:Catalogo' (ver README).");
+        var authenticationUrl = configuration["Servicios:Authentication"]
+            ?? throw new InvalidOperationException("Falta la URL de AuthenticationSystem 'Servicios:Authentication'.");
+        services.AddHttpClient("authentication", http =>
+        {
+            http.BaseAddress = new Uri(authenticationUrl);
+            http.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddSingleton<IAuthenticationTokenProvider, AuthenticationTokenProvider>();
+        services.AddTransient<CatalogoBearerTokenHandler>();
         services.AddHttpClient<ICatalogoProductos, CatalogoRestProductos>(http =>
         {
             http.BaseAddress = new Uri(catalogoUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<CatalogoBearerTokenHandler>();
 
         // Solo Clase 4: versiones "malas" para comparar
         services.AddScoped<IDemoMalasPracticas, DemoMalasPracticas>();

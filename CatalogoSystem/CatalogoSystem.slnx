@@ -15,4 +15,8 @@
     <Project Path="src/Catalogo.Infrastructure/Catalogo.Infrastructure.csproj" />
     <Project Path="src/Catalogo.Api/Catalogo.Api.csproj" />
   </Folder>
+  <Project Path="../AuthenticationSystem/src/Authentication.Api/Authentication.Api.csproj" />
+  <Project Path="../AuthenticationSystem/src/Authentication.Application/Authentication.Application.csproj" />
+  <Project Path="../AuthenticationSystem/src/Authentication.Domain/Authentication.Domain.csproj" />
+  <Project Path="../AuthenticationSystem/src/Authentication.Infrastructure/Authentication.Infrastructure.csproj" />
 </Solution>

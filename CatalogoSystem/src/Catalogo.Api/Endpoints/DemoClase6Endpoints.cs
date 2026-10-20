@@ -8,7 +8,9 @@ public static class DemoClase6Endpoints
 {
     public static void MapDemoClase6(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/demo/clase6").WithTags("Demo Clase 6");
+        var g = app.MapGroup("/demo/clase6")
+            .WithTags("Demo Clase 6")
+            .RequireAuthorization("PedidosService");
 
         // LO MALO: IResult sin tipo; Swagger no sabe qué devuelve
         g.MapGet("/producto-malo/{categoria}/{id}", async (string categoria, string id, ISender sender, CancellationToken ct) =>

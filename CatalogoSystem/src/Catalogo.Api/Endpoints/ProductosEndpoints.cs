@@ -26,7 +26,8 @@ public static class ProductosEndpoints
     {
         var g = app.MapGroup("/api/productos")
                    .WithTags("Productos")
-                   .AddEndpointFilter<TiempoFilter>();   // filtro que se aplica a cada endpoint del grupo
+                   .AddEndpointFilter<TiempoFilter>()
+                   .RequireAuthorization("PedidosService");
 
         g.MapGet("/", ListarAsync)
             .WithName("ListarProductos")

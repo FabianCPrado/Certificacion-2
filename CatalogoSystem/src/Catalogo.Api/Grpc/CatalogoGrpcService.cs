@@ -2,10 +2,12 @@ using Catalogo.Application.Productos.Queries.ObtenerProducto;
 using Catalogo.Grpc;
 using Grpc.Core;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Catalogo.Api.Grpc;
 
 /// <summary>Segunda puerta al catálogo: usa la misma query que la Minimal API y no tiene lógica propia.</summary>
+[Authorize(Policy = "PedidosService")]
 public class CatalogoGrpcService(ISender sender) : CatalogoService.CatalogoServiceBase
 {
     public override async Task<PrecioYStockReply> ObtenerPrecioYStock(ProductoRequest request, ServerCallContext context)

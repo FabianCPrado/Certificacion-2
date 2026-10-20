@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Authentication.Domain/Authentication.Domain.csproj" />
+    <Project Path="src/Authentication.Application/Authentication.Application.csproj" />
+    <Project Path="src/Authentication.Infrastructure/Authentication.Infrastructure.csproj" />
+    <Project Path="src/Authentication.Api/Authentication.Api.csproj" />
+  </Folder>
+</Solution>

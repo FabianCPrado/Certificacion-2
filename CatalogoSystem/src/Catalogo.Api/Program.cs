@@ -1,9 +1,12 @@
+using System.Text;
 using Catalogo.Api.Endpoints;
 using Catalogo.Api.Grpc;
 using Catalogo.Api.Infrastructure;
 using Catalogo.Application;
 using Catalogo.Infrastructure;
 using Catalogo.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,9 +21,38 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddGrpc(o => o.Interceptors.Add<LoggingInterceptor>());
 
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+    throw new InvalidOperationException("Jwt:SigningKey debe tener al menos 32 bytes y configurarse fuera de appsettings.");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "AuthenticationSystem";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "catalogo-api";
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization(options => options.AddPolicy("PedidosService", policy =>
+    policy.RequireAuthenticatedUser()
+        .RequireClaim("client_id", "pedidos-service")
+        .RequireClaim("client_type", "service")));
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
