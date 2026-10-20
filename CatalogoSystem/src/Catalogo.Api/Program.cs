@@ -7,6 +7,7 @@ using Catalogo.Infrastructure;
 using Catalogo.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,41 @@ builder.Services
 // API: errores como ProblemDetails, documentación OpenAPI y gRPC
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        var bearerScheme = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header
+        };
+
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+        {
+            ["Bearer"] = bearerScheme
+        };
+
+        var operations = document.Paths.Values
+            .Select(path => path.Operations)
+            .Where(pathOperations => pathOperations is not null)
+            .SelectMany(pathOperations => pathOperations!.Values);
+
+        foreach (var operation in operations)
+        {
+            operation.Security ??= [];
+            operation.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+        }
+
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddGrpc(o => o.Interceptors.Add<LoggingInterceptor>());
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
