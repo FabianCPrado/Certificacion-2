@@ -35,6 +35,7 @@ if (app.Environment.IsDevelopment())
 
     // Demos de la Clase 5 (Redis, Blob Storage y Cosmos DB): solo en Development
     app.MapDemoClase5();
+    app.MapDemoClase6();
     await app.Services.InicializarCosmosAsync();   // crea los contenedores de Cosmos; si el emulador no está, solo avisa
 }
 

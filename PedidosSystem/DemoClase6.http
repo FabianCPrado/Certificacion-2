@@ -1,0 +1,12 @@
+@baseUrl = https://localhost:7101
+@categoria = Abarrotes
+@productoId = fa07bf96-fe17-40ee-ae8d-4793feeb3e5b
+
+### Lectura de precio y stock por REST
+GET {{baseUrl}}/demo/clase6/catalogo-rest/{{categoria}}/{{productoId}}
+
+### Lectura de precio y stock por gRPC
+GET {{baseUrl}}/demo/clase6/catalogo-grpc/{{categoria}}/{{productoId}}
+
+### Comparación, una llamada por cada transporte
+GET {{baseUrl}}/demo/clase6/comparar/{{categoria}}/{{productoId}}

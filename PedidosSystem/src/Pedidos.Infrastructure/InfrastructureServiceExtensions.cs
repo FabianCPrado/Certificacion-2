@@ -1,4 +1,5 @@
 ﻿using Azure.Storage.Blobs;
+using Catalogo.Grpc;
 using Microsoft.Azure.Cosmos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +24,7 @@ using Pedidos.Infrastructure.Persistence.Repositories.Pedidos;
 using Pedidos.Infrastructure.Queries.Auditoria;
 using Pedidos.Infrastructure.Queries.Pedidos;
 using Pedidos.Infrastructure.Rest.Catalogo;
+using Pedidos.Infrastructure.Grpc.Catalogo;
 using Pedidos.Infrastructure.Rest.Clientes;
 using Pedidos.Infrastructure.Storage;
 
@@ -87,6 +89,16 @@ public static class InfrastructureServiceExtensions
             http.BaseAddress = new Uri(catalogoUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler<CatalogoBearerTokenHandler>();
+
+        services.AddGrpcClient<CatalogoService.CatalogoServiceClient>(options =>
+            options.Address = new Uri(catalogoUrl))
+            .AddCallCredentials(async (context, metadata, serviceProvider) =>
+            {
+                var tokenProvider = serviceProvider.GetRequiredService<IAuthenticationTokenProvider>();
+                var token = await tokenProvider.GetAccessTokenAsync(context.CancellationToken);
+                metadata.Add("Authorization", $"Bearer {token}");
+            });
+        services.AddScoped<ICatalogoGrpcClient, CatalogoGrpcClient>();
 
         // Solo Clase 4: versiones "malas" para comparar
         services.AddScoped<IDemoMalasPracticas, DemoMalasPracticas>();
