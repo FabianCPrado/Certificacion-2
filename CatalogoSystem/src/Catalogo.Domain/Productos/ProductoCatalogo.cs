@@ -1,9 +1,6 @@
 namespace Catalogo.Domain.Productos;
 
-/// <summary>
-/// Producto del catálogo que vive en SQL Server: solo datos. Cada categoría tiene atributos distintos
-/// (bebidas: litros; electro: pulgadas y voltaje…), por eso se guardan en un diccionario y no en columnas.
-/// </summary>
+/// <summary>Producto del catálogo almacenado en SQL Server.</summary>
 public class ProductoCatalogo
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -17,5 +14,5 @@ public class ProductoCatalogo
 
     public int Stock { get; set; }
 
-    public Dictionary<string, string> Atributos { get; set; } = [];
+    public ICollection<ProductoAtributo> Atributos { get; set; } = new List<ProductoAtributo>();
 }

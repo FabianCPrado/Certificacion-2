@@ -17,7 +17,7 @@ namespace Catalogo.Api.Endpoints;
 public static class ProductosEndpoints
 {
     public record CambiarPrecioRequest(decimal Precio);
-    public record CrearProductoRequest(string Categoria, string Nombre, decimal Precio, int Stock, Dictionary<string, string>? Atributos);
+    public record CrearProductoRequest(string Categoria, string Nombre, decimal Precio, int Stock, IReadOnlyList<AtributoDto>? Atributos);
     public record ActualizarProductoRequest(string Nombre, decimal Precio, int Stock);
     public record StockRequest(int Cantidad);
     public record AumentarPrecioRequest(decimal Porcentaje);

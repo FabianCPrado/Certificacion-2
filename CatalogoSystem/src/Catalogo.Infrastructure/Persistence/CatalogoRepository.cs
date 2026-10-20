@@ -9,10 +9,12 @@ public sealed class CatalogoRepository(CatalogoDbContext db) : ICatalogoReposito
 {
     public async Task<ProductoCatalogo?> ObtenerAsync(string id, string categoria, CancellationToken cancellationToken = default) =>
         await db.Productos.AsNoTracking()
+            .Include(p => p.Atributos)
             .FirstOrDefaultAsync(p => p.Id == id && p.Categoria == categoria, cancellationToken);
 
     public async Task<IReadOnlyList<ProductoCatalogo>> PorCategoriaAsync(string categoria, int saltar, int tomar, CancellationToken cancellationToken = default) =>
         await db.Productos.AsNoTracking()
+            .Include(p => p.Atributos)
             .Where(p => p.Categoria == categoria)
             .OrderBy(p => p.Nombre)
             .Skip(saltar).Take(tomar)
@@ -20,6 +22,7 @@ public sealed class CatalogoRepository(CatalogoDbContext db) : ICatalogoReposito
 
     public async Task<IReadOnlyList<ProductoCatalogo>> BuscarPorNombreAsync(string categoria, string nombre, CancellationToken cancellationToken = default) =>
         await db.Productos.AsNoTracking()
+            .Include(p => p.Atributos)
             .Where(p => p.Categoria == categoria && EF.Functions.Like(p.Nombre, $"%{nombre}%"))
             .ToListAsync(cancellationToken);
 
