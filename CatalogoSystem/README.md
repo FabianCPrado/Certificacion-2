@@ -39,4 +39,6 @@ dotnet run --project src/Catalogo.Api
 
 Todas las respuestas REST traen el header `X-Tiempo-ms`. `/demo/clase6/*` solo existe en Development.
 
+Ver `docs/clase6/Instrucciones.Clase6.md` para el índice de todos los puntos de la Clase 6 con su estado, y `docs/clase6/INSTRUCCIONES.md` para el detalle de cada tarea.
+
 Ver `docs/clase6/PROMPT-ENDPOINTS.md` para la plantilla de prompt y la revisión del endpoint generado con IA.

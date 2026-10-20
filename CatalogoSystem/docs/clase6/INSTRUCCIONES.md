@@ -558,6 +558,69 @@ services.AddGrpcClient<CatalogoService.CatalogoServiceClient>(o =>
 
 ---
 
+## Referencia · Cómo quedó implementado gRPC (de punta a punta)
+
+Esta sección describe el código real del repo. Difiere de las tareas de arriba en los nombres (`ICatalogoGrpcClient` / `CatalogoGrpcClient` en lugar de `ICatalogoPrecios` / `CatalogoPreciosGrpc`) y en el JWT (lo emite AuthenticationSystem en lugar de `dotnet user-jwts`).
+
+### R.1 Recorrido de `GET /demo/clase6/catalogo-grpc/{categoria}/{id}`
+
+```
+Cliente HTTP → Pedidos.Api (DemoClase6Endpoints)
+   → ICatalogoGrpcClient → CatalogoGrpcClient → CatalogoServiceClient
+        ├─ CallCredentials → AuthenticationTokenProvider → (si hace falta) POST AuthenticationSystem /api/tokens
+        └─ HTTP/2 + Protobuf + Bearer JWT
+             → Catalogo.Api: JWT + política PedidosService → LoggingInterceptor
+               → CatalogoGrpcService → MediatR ObtenerProductoQuery → BD
+             ← PrecioYStockReply (o RpcException NotFound)
+   ← 200 { via:"gRPC", ms, Precio, Stock }  /  404
+```
+
+| # | Paso | Archivo |
+|---|------|---------|
+| 0 | Contrato compartido (`Server` en Catálogo, `Client` en Pedidos) | `CatalogoSystem/protos/catalogo.proto`, `Catalogo.Api.csproj`, `Pedidos.Infrastructure.csproj` (línea 23) |
+| 1 | Endpoint de entrada, mide el tiempo y devuelve 404 si el cliente da `null` | `PedidosSystem/src/Pedidos.Api/Endpoints/DemoClase6Endpoints.cs` (`ObtenerPorGrpcAsync`) |
+| 2 | Adaptador: arma `ProductoRequest`, llama al rpc, convierte `double` a `decimal`, traduce `NotFound` a `null` | `PedidosSystem/src/Pedidos.Infrastructure/Grpc/Catalogo/CatalogoGrpcClient.cs` |
+| 3 | Registro del cliente gRPC y de las credenciales por llamada | `PedidosSystem/src/Pedidos.Infrastructure/InfrastructureServiceExtensions.cs` (líneas 93-101) |
+| 4 | Recepción: JWT, política, interceptor y mapeo del servicio | `CatalogoSystem/src/Catalogo.Api/Program.cs` |
+| 5 | Servicio gRPC: envía `ObtenerProductoQuery` por MediatR, sin lógica propia | `CatalogoSystem/src/Catalogo.Api/Grpc/CatalogoGrpcService.cs` |
+| 6 | Vuelta: Protobuf por HTTP/2, conversión y JSON de la demo | los mismos archivos, en sentido inverso |
+
+### R.2 De dónde sale la URL de Catálogo
+
+`configuration["Servicios:Catalogo"]` (línea 76 de `InfrastructureServiceExtensions.cs`) se lee de `PedidosSystem/src/Pedidos.Api/appsettings.Development.json`:
+
+```json
+"Servicios": {
+  "Catalogo": "https://localhost:7301/"
+}
+```
+
+- Los `:` representan el anidamiento del JSON.
+- La usan el cliente REST (`AddHttpClient`) y el cliente gRPC (`AddGrpcClient`).
+- Solo se carga en Development. Si la clave falta, la app lanza `InvalidOperationException` al arrancar.
+- Se puede sobrescribir con la variable de entorno `Servicios__Catalogo` (doble guion bajo) o con User Secrets.
+
+### R.3 Dónde está la seguridad de gRPC
+
+**Cliente (Pedidos)**
+1. **Adjuntar el JWT a cada llamada.** `InfrastructureServiceExtensions.cs`, líneas 93-100: `AddCallCredentials` agrega `Authorization: Bearer <token>` a los metadatos.
+2. **Obtener y cachear el token.** `Pedidos.Infrastructure/Rest/Catalogo/AuthenticationTokenProvider.cs`:
+   - pide el JWT a AuthenticationSystem (`POST api/tokens`) con `ClientId` (`pedidos-service`) y `ClientSecret` (`ClientCredentials:PedidosSecret`, en User Secrets);
+   - lo cachea y lo renueva cuando le quedan menos de 30 s;
+   - un semáforo evita renovaciones concurrentes.
+
+**Servidor (Catálogo)**
+3. **Autenticación JWT.** `Catalogo.Api/Program.cs`, líneas 59-80. Valida firma (`Jwt:SigningKey`, mínimo 32 bytes; la app no arranca si falta), issuer, audience y expiración (tolerancia de 30 s).
+4. **Autorización por política.** `Program.cs`, líneas 81-84: la política `PedidosService` exige `client_id = pedidos-service` y `client_type = service`. Se aplica con `[Authorize(Policy = "PedidosService")]` sobre `CatalogoGrpcService`, así que cubre todos los métodos, incluido `SeguirStock`. Requiere `UseAuthentication()` y `UseAuthorization()` antes de `MapGrpcService`.
+5. **Interceptor de logging.** `Catalogo.Api/Grpc/LoggingInterceptor.cs`, registrado en `AddGrpc`. Solo cubre llamadas unarias: `SeguirStock` (streaming) no queda logueado.
+
+**Lo que no hay**
+- mTLS (certificados de cliente).
+- Cifrado propio: depende de HTTPS. Con `https://localhost:7301/` va cifrado; con `http://` el JWT viajaría en claro.
+- Rate limiting ni permisos por método: solo existe la política general del servicio.
+
+---
+
 ## Cómo pedírselo a un asistente de IA
 
 Con este archivo en `docs/clase6/INSTRUCCIONES.md`, alcanza con decirle:
