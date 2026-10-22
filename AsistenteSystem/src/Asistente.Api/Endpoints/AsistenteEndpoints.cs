@@ -18,7 +18,19 @@ public static class AsistenteEndpoints
         g.MapGet("/herramientas", ListarHerramientasAsync)
             .WithSummary("Lista las herramientas que conoce el asistente (el mapa del sistema)");
 
+        g.MapGet("/salud", SaludAsync)
+            .WithSummary("Comprueba si el asistente está conectado a Authentication, Catálogo, Pedidos, Clientes y al modelo");
+
         return app;
+    }
+
+    // 200 si responden todas las conexiones; 503 si alguna falla (el cuerpo siempre detalla cada componente)
+    private static async Task<Results<Ok<SaludDto>, JsonHttpResult<SaludDto>>> SaludAsync(ISender sender, CancellationToken ct)
+    {
+        var salud = await sender.Send(new VerificarSaludQuery(), ct);
+        return salud.Estado == "Sano"
+            ? TypedResults.Ok(salud)
+            : TypedResults.Json(salud, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
     private static async Task<Ok<RespuestaDto>> PreguntarAsync(PreguntaRequest request, ISender sender, CancellationToken ct) =>

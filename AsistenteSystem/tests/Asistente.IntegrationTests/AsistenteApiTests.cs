@@ -2,12 +2,17 @@ using System.Net;
 using System.Net.Http.Json;
 using Asistente.Domain;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 
 namespace Asistente.IntegrationTests;
 
 public class AsistenteApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    // Sin clave de IA: los tests nunca llaman a Claude (ni gastan), aunque el equipo tenga IA:ApiKey en User Secrets
+    private readonly HttpClient _client = factory
+        .WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["IA:ApiKey"] = "" })))
+        .CreateClient();
 
     [Fact]
     public async Task Herramientas_devuelve_el_mapa()
@@ -27,10 +32,21 @@ public class AsistenteApiTests(WebApplicationFactory<Program> factory) : IClassF
     }
 
     [Fact]
+    public async Task Preguntar_con_un_json_mal_formado_devuelve_400()
+    {
+        using var cuerpo = new StringContent("{ esto no es json", System.Text.Encoding.UTF8, "application/json");
+
+        var respuesta = await _client.PostAsync("/api/asistente/preguntar", cuerpo);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
     public async Task Preguntar_sin_modelo_configurado_devuelve_503()
     {
         var respuesta = await _client.PostAsJsonAsync("/api/asistente/preguntar", new { pregunta = "hay stock de yerba?", clienteId = (Guid?)null });
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, respuesta.StatusCode);
+        Assert.Contains("no está configurado", await respuesta.Content.ReadAsStringAsync());
     }
 }

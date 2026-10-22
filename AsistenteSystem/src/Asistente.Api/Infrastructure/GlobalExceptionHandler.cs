@@ -27,6 +27,12 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                         .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray())
                 }
             },
+            BadHttpRequestException => new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Solicitud inválida",
+                Detail = "El cuerpo de la solicitud no es un JSON válido."
+            },
             NotFoundException => new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
