@@ -4,6 +4,7 @@ using Asistente.Application.Asistente;
 using Asistente.Application.Exceptions;
 using Asistente.Application.Interfaces;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 
 namespace Asistente.Infrastructure.IA;
 
@@ -11,7 +12,7 @@ namespace Asistente.Infrastructure.IA;
 /// Responde preguntas con un modelo de lenguaje que llama a las herramientas del mapa. La IA es un detalle de
 /// Infrastructure: Application solo conoce <see cref="IAsistente"/>.
 /// </summary>
-public sealed class AsistenteIA(IChatClient chat, Herramientas herramientas) : IAsistente
+public sealed class AsistenteIA(IChatClient chat, Herramientas herramientas, string modelo, ILogger<AsistenteIA> logger) : IAsistente
 {
     private const int MaxTokensRespuesta = 800;
     private static readonly TimeSpan Limite = TimeSpan.FromSeconds(30);
@@ -32,11 +33,16 @@ public sealed class AsistenteIA(IChatClient chat, Herramientas herramientas) : I
         using var limite = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         limite.CancelAfter(Limite);
         registro.Corte = limite;
+        var reloj = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             var respuesta = await chat.GetResponseAsync(mensajes, opciones, limite.Token);
-            return new RespuestaDto(respuesta.Text, registro.FuentesUsadas(), registro.HerramientasUsadas());
+            var uso = new UsoDto(modelo, respuesta.Usage?.InputTokenCount, respuesta.Usage?.OutputTokenCount, reloj.ElapsedMilliseconds);
+            logger.LogInformation(
+                "Pregunta respondida con {Modelo}: {TokensEntrada} tokens de entrada, {TokensSalida} de salida, {Duracion} ms, herramientas [{Herramientas}]",
+                uso.Modelo, uso.TokensEntrada, uso.TokensSalida, uso.DuracionMs, string.Join(", ", registro.HerramientasUsadas()));
+            return new RespuestaDto(respuesta.Text, registro.FuentesUsadas(), registro.HerramientasUsadas(), uso);
         }
         catch (Exception) when (registro.Falla is not null)
         {

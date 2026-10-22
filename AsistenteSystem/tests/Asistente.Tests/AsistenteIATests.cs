@@ -4,6 +4,7 @@ using Asistente.Application.Interfaces;
 using Asistente.Domain;
 using Asistente.Infrastructure.IA;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace Asistente.Tests;
@@ -52,7 +53,7 @@ public class AsistenteIATests
     {
         var mapa = new MapaFalso([.. Nombres.Select(n => new HerramientaInfo(n, "d", "s", "GET /x", true))]);
         var herramientas = new Herramientas(mapa, _catalogo, Substitute.For<IPedidosConsultas>(), Substitute.For<IClientesConsultas>());
-        return new AsistenteIA(new FunctionInvokingChatClient(modelo), herramientas);
+        return new AsistenteIA(new FunctionInvokingChatClient(modelo), herramientas, "modelo-de-prueba", NullLogger<AsistenteIA>.Instance);
     }
 
     [Fact]
@@ -69,6 +70,38 @@ public class AsistenteIATests
         Assert.Equal("Sí, hay 12 unidades de yerba.", respuesta.Respuesta);
         Assert.Equal(["ObtenerPrecioYStock"], respuesta.HerramientasUsadas);
         Assert.Equal([new Fuente("Catalogo", "Abarrotes/yerba-1")], respuesta.Fuentes);
+    }
+
+    private static ChatResponse ConUso(ChatResponse respuesta, long entrada, long salida)
+    {
+        respuesta.Usage = new UsageDetails { InputTokenCount = entrada, OutputTokenCount = salida };
+        return respuesta;
+    }
+
+    [Fact]
+    public async Task La_respuesta_informa_el_consumo_sumando_todas_las_llamadas_al_modelo()
+    {
+        _catalogo.ObtenerAsync("Abarrotes", "yerba-1", Arg.Any<CancellationToken>())
+            .Returns(new ProductoInfo("Abarrotes", "yerba-1", "Yerba mate 1 kg", 4.20m, 12));
+        // Una pregunta con herramienta hace dos llamadas al modelo, y las dos se facturan
+        var modelo = new ModeloFalso(
+            ConUso(LlamaA("ObtenerPrecioYStock", new() { ["categoria"] = "Abarrotes", ["id"] = "yerba-1" }), 100, 20),
+            ConUso(Texto("Hay 12 unidades."), 150, 30));
+
+        var respuesta = await Crear(modelo).ResponderAsync(new PreguntaRequest("¿Hay yerba?", null));
+
+        Assert.Equal("modelo-de-prueba", respuesta.Uso!.Modelo);
+        Assert.Equal(250, respuesta.Uso.TokensEntrada);
+        Assert.Equal(50, respuesta.Uso.TokensSalida);
+    }
+
+    [Fact]
+    public async Task Si_el_modelo_no_informa_el_consumo_los_tokens_quedan_sin_dato()
+    {
+        var respuesta = await Crear(new ModeloFalso(Texto("hola"))).ResponderAsync(new PreguntaRequest("hola", null));
+
+        Assert.Null(respuesta.Uso!.TokensEntrada);
+        Assert.Null(respuesta.Uso.TokensSalida);
     }
 
     [Fact]

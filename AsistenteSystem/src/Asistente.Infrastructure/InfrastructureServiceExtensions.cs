@@ -73,7 +73,8 @@ public static class InfrastructureServiceExtensions
                 .UseFunctionInvocation(proveedores.GetService<ILoggerFactory>(), f => f.MaximumIterationsPerRequest = maxIteraciones)
                 .Build();
 
-            return new AsistenteIA(chat, proveedores.GetRequiredService<Herramientas>());
+            return new AsistenteIA(
+                chat, proveedores.GetRequiredService<Herramientas>(), modelo, proveedores.GetRequiredService<ILogger<AsistenteIA>>());
         });
     }
 
