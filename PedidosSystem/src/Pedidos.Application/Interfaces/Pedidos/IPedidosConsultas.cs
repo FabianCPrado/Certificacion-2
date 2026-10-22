@@ -1,5 +1,6 @@
 using Pedidos.Application.Common;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
+using Pedidos.Application.Pedidos.Queries.ListarPedidosDetalle;
 using Pedidos.Application.Pedidos.Queries.ObtenerPedido;
 
 namespace Pedidos.Application.Interfaces.Pedidos;
@@ -15,6 +16,10 @@ public interface IPedidosConsultas
 
     /// <summary>Listado paginado de resúmenes (sin tracking ni líneas), con filtro opcional por cliente.</summary>
     Task<PagedResult<PedidoResumenDto>> ListarAsync(
+        int pagina, int tamanio, Guid? clienteId, CancellationToken cancellationToken = default);
+
+    /// <summary>Listado paginado con las líneas de cada pedido y sin el email, con filtro opcional por cliente.</summary>
+    Task<PagedResult<PedidoDetalleDto>> ListarDetalleAsync(
         int pagina, int tamanio, Guid? clienteId, CancellationToken cancellationToken = default);
 
     /// <summary>

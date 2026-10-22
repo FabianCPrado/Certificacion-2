@@ -5,6 +5,7 @@ using Pedidos.Application.Exceptions;
 using Pedidos.Application.Interfaces.Clientes;
 using Pedidos.Application.Interfaces.Pedidos;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
+using Pedidos.Application.Pedidos.Queries.ListarPedidosDetalle;
 using Pedidos.Application.Pedidos.Queries.ObtenerClienteDePedido;
 using Pedidos.Application.Pedidos.Queries.ObtenerPedido;
 
@@ -25,6 +26,10 @@ internal sealed class FakePedidosConsultas(params PedidoDto[] pedidos) : IPedido
         Task.FromResult(pedidos.FirstOrDefault(p => p.Id == id));
 
     public Task<PagedResult<PedidoResumenDto>> ListarAsync(
+        int pagina, int tamanio, Guid? clienteId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<PagedResult<PedidoDetalleDto>> ListarDetalleAsync(
         int pagina, int tamanio, Guid? clienteId, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 

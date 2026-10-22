@@ -2,6 +2,7 @@
 using Pedidos.Application.Common;
 using Pedidos.Application.Interfaces.Pedidos;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
+using Pedidos.Application.Pedidos.Queries.ListarPedidosDetalle;
 using Pedidos.Application.Pedidos.Queries.ObtenerPedido;
 using Pedidos.Infrastructure.Persistence;
 
@@ -24,6 +25,7 @@ public sealed class PedidosConsultas(AppDbContext context) : IPedidosConsultas
                 p.CreadoEn,
                 p.Lineas.Select(l => new LineaPedidoDto(
                     l.ProductoId,
+                    l.Categoria,
                     l.NombreProducto,
                     l.PrecioUnitario.Monto,
                     l.Cantidad,
@@ -56,6 +58,39 @@ public sealed class PedidosConsultas(AppDbContext context) : IPedidosConsultas
         return new PagedResult<PedidoResumenDto>(items, pagina, tamanio, total);
     }
 
+    public async Task<PagedResult<PedidoDetalleDto>> ListarDetalleAsync(
+        int pagina, int tamanio, Guid? clienteId, CancellationToken cancellationToken = default)
+    {
+        var consulta = context.Pedidos.AsNoTracking();
+
+        if (clienteId is not null)
+            consulta = consulta.Where(p => p.ClienteId == clienteId);
+
+        var total = await consulta.CountAsync(cancellationToken);
+
+        // Una sola consulta con las líneas anidadas (sin N+1) y sin el email del cliente
+        var items = await consulta
+            .OrderByDescending(p => p.CreadoEn).ThenBy(p => p.Id)
+            .Skip((pagina - 1) * tamanio).Take(tamanio)
+            .Select(p => new PedidoDetalleDto(
+                p.Id,
+                p.ClienteId,
+                p.Estado.ToString(),
+                p.Lineas.Sum(l => l.PrecioUnitario.Monto * l.Cantidad),
+                p.Moneda,
+                p.CreadoEn,
+                p.Lineas.Select(l => new LineaPedidoDto(
+                    l.ProductoId,
+                    l.Categoria,
+                    l.NombreProducto,
+                    l.PrecioUnitario.Monto,
+                    l.Cantidad,
+                    l.PrecioUnitario.Monto * l.Cantidad)).ToList()))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<PedidoDetalleDto>(items, pagina, tamanio, total);
+    }
+
     public async Task<IReadOnlyList<PedidoDto>> ListarPorFechasAsync(
         DateOnly desde, DateOnly hasta, int maximo, CancellationToken cancellationToken = default)
     {
@@ -77,6 +112,7 @@ public sealed class PedidosConsultas(AppDbContext context) : IPedidosConsultas
                 p.CreadoEn,
                 p.Lineas.Select(l => new LineaPedidoDto(
                     l.ProductoId,
+                    l.Categoria,
                     l.NombreProducto,
                     l.PrecioUnitario.Monto,
                     l.Cantidad,

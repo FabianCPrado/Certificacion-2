@@ -13,6 +13,7 @@ public sealed record PedidoDto(
 
 public sealed record LineaPedidoDto(
     string ProductoId,
+    string Categoria,
     string NombreProducto,
     decimal PrecioUnitario,
     int Cantidad,

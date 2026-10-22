@@ -9,6 +9,7 @@ using Pedidos.Application.Pedidos.Commands.ConfirmarPedido;
 using Pedidos.Application.Pedidos.Commands.CrearPedido;
 using Pedidos.Application.Pedidos.Commands.EliminarPedido;
 using Pedidos.Application.Pedidos.Queries.ListarPedidos;
+using Pedidos.Application.Pedidos.Queries.ListarPedidosDetalle;
 using Pedidos.Application.Pedidos.Queries.ObtenerClienteDePedido;
 using Pedidos.Application.Pedidos.Queries.ObtenerPedido;
 
@@ -63,6 +64,17 @@ public sealed class PedidosController(ISender sender) : ControllerBase
         [FromQuery] Guid? clienteId, CancellationToken cancellationToken, [FromQuery] int pagina = 1, [FromQuery] int tamanio = 20)
     {
         var pedidos = await sender.Send(new ListarPedidosQuery(pagina, tamanio, clienteId), cancellationToken);
+        return Ok(pedidos);
+    }
+
+    /// <summary>Lista los pedidos con sus líneas (paginado, sin email), opcionalmente de un solo cliente.</summary>
+    [HttpGet("detalle")]
+    [ProducesResponseType<PagedResult<PedidoDetalleDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ListarDetalle(
+        [FromQuery] Guid? clienteId, CancellationToken cancellationToken, [FromQuery] int pagina = 1, [FromQuery] int tamanio = 20)
+    {
+        var pedidos = await sender.Send(new ListarPedidosDetalleQuery(pagina, tamanio, clienteId), cancellationToken);
         return Ok(pedidos);
     }
 
