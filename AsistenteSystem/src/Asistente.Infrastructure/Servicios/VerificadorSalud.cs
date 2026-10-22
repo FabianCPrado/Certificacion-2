@@ -25,16 +25,30 @@ public sealed class VerificadorSalud(
 
     public async Task<SaludDto> VerificarAsync(CancellationToken cancellationToken = default)
     {
+        var autenticacion = Medir("Authentication", "API + AuthenticationDB", TokenAsync, cancellationToken);
+
         var componentes = await Task.WhenAll(
             Medir("Mapa", "mapa-sistema.json", () => Task.FromResult($"{mapa.Herramientas.Count} herramientas cargadas"), cancellationToken),
-            Medir("Authentication", "API + AuthenticationDB", TokenAsync, cancellationToken),
-            Medir("Catalogo", "API + CatalogoDb", () => ContarAsync(Catalogo, "/api/productos/categorias", "categorías", cancellationToken), cancellationToken),
+            autenticacion,
+            CatalogoAsync(autenticacion, cancellationToken),
             Medir("Pedidos", "API + PedidosDb", () => ContarAsync(Pedidos, "/api/pedidos?tamanio=1", "pedidos", cancellationToken), cancellationToken),
             Medir("Clientes", "API + ClientesDb", () => ContarAsync(Clientes, "/api/clientes?tamanio=1", "clientes", cancellationToken), cancellationToken),
             MedirModelo(cancellationToken));
 
         var sano = componentes.All(c => c.Estado != "Error");
         return new SaludDto(sano ? "Sano" : "Degradado", componentes);
+    }
+
+    // Catálogo exige JWT: si Authentication no lo entrega, se dice así en vez de culpar a Catálogo de no responder
+    private async Task<ComponenteSalud> CatalogoAsync(Task<ComponenteSalud> autenticacion, CancellationToken cancellationToken)
+    {
+        const string conecta = "API + CatalogoDb";
+
+        if ((await autenticacion).Estado == "Error")
+            return new ComponenteSalud(Catalogo, conecta, "Error", "Sin JWT: Authentication no lo entrega, no se puede consultar Catálogo", 0);
+
+        return await Medir(Catalogo, conecta,
+            () => ContarAsync(Catalogo, "/api/productos/categorias", "categorías", cancellationToken), cancellationToken);
     }
 
     private async Task<string> TokenAsync()
