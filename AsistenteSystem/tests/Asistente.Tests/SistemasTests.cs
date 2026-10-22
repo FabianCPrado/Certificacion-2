@@ -3,6 +3,7 @@ using Asistente.Application.Exceptions;
 using Asistente.Application.Interfaces;
 using Asistente.Application.Sistemas;
 using Asistente.Domain;
+using Asistente.Infrastructure.IA;
 using Asistente.Infrastructure.Mapa;
 
 namespace Asistente.Tests;
@@ -27,13 +28,13 @@ public class SistemasTests
     private static readonly SistemaInfo Catalogo = Sistema(
         "Catalogo",
         endpoints: [new("GET", "/api/productos/{categoria}/{id}", "Obtiene un producto con su stock", "JWT")],
-        contratos: [new("ProductoDto", "id, nombre, precio, stock", ["Pedidos", "Asistente"])]);
+        contratos: [new("ProductoDto", "id, nombre, precio, stock", ["Pedidos", "Reportes"])]);
 
     private static readonly SistemaInfo Pedidos = Sistema(
         "Pedidos", consume: [new("Catalogo", "Leer productos", "REST")]);
 
-    private static readonly SistemaInfo Asistente = Sistema(
-        "Asistente", consume: [new("Catalogo", "Precio y stock", "REST"), new("API de Anthropic", "El modelo", "HTTPS")]);
+    private static readonly SistemaInfo Reportes = Sistema(
+        "Reportes", consume: [new("Catalogo", "Precio y stock", "REST"), new("API externa", "Un tercero", "HTTPS")]);
 
     private static readonly DocumentoInfo[] Documentos =
     [
@@ -42,7 +43,7 @@ public class SistemasTests
     ];
 
     private static ConocimientoEcosistema Conocimiento() =>
-        new(new EstructuraFalsa(Catalogo, Pedidos, Asistente), new BibliotecaFalsa(Documentos));
+        new(new EstructuraFalsa(Catalogo, Pedidos, Reportes), new BibliotecaFalsa(Documentos));
 
     // --- Lista y detalle -----------------------------------------------------------------------------------------------
 
@@ -51,9 +52,9 @@ public class SistemasTests
     {
         var lista = Conocimiento().Listar();
 
-        Assert.Equal(["Catalogo", "Pedidos", "Asistente"], lista.Select(s => s.Nombre));
+        Assert.Equal(["Catalogo", "Pedidos", "Reportes"], lista.Select(s => s.Nombre));
         Assert.Equal(1, lista[0].CantidadEndpoints);
-        Assert.Equal(["Catalogo", "API de Anthropic"], lista[2].Consume);
+        Assert.Equal(["Catalogo", "API externa"], lista[2].Consume);
     }
 
     [Theory]
@@ -69,7 +70,7 @@ public class SistemasTests
     {
         var ex = Assert.Throws<NotFoundException>(() => Conocimiento().Obtener("Facturas"));
 
-        Assert.Contains("Catalogo, Pedidos, Asistente", ex.Message);
+        Assert.Contains("Catalogo, Pedidos, Reportes", ex.Message);
     }
 
     // --- Impacto -------------------------------------------------------------------------------------------------------
@@ -79,15 +80,15 @@ public class SistemasTests
     {
         var impacto = Conocimiento().Impacto("catalogo");
 
-        Assert.Equal(["Pedidos", "Asistente"], impacto.LoConsumen.Select(c => c.Sistema));
+        Assert.Equal(["Pedidos", "Reportes"], impacto.LoConsumen.Select(c => c.Sistema));
         Assert.Equal("ProductoDto", impacto.Contratos.Single().Nombre);
-        Assert.Contains("Pedidos, Asistente", impacto.Resumen);
+        Assert.Contains("Pedidos, Reportes", impacto.Resumen);
     }
 
     [Fact]
     public void Impacto_de_un_sistema_que_nadie_llama_lo_dice()
     {
-        var impacto = Conocimiento().Impacto("Asistente");
+        var impacto = Conocimiento().Impacto("Reportes");
 
         Assert.Empty(impacto.LoConsumen);
         Assert.Contains("Ningún otro sistema", impacto.Resumen);
@@ -98,7 +99,7 @@ public class SistemasTests
     [Theory]
     [InlineData("STOCK", "Endpoint")]
     [InlineData("stock", "Contrato")]
-    [InlineData("anthropic", "Dependencia")]
+    [InlineData("externa", "Dependencia")]
     [InlineData("dependencias", "Arquitectura")]
     [InlineData("adentro", "Instrucciones")]
     public void La_busqueda_encuentra_en_cada_tipo_sin_importar_mayusculas(string texto, string tipo) =>
@@ -163,13 +164,13 @@ public class SistemasTests
     private static string DeAsistente(string relativa) => Path.Combine(RaizDelRepositorio()!, "AsistenteSystem", relativa);
 
     [Fact]
-    public void El_sistemas_json_real_define_los_cinco_sistemas_con_su_contenido()
+    public void El_sistemas_json_real_define_los_cuatro_sistemas_con_su_contenido()
     {
         if (RaizDelRepositorio() is null) return;
 
         var sistemas = new EstructuraSistemas(DeAsistente("src/Asistente.Api/sistemas.json")).Sistemas;
 
-        Assert.Equal(["Authentication", "Catalogo", "Pedidos", "Clientes", "Asistente"], sistemas.Select(s => s.Nombre));
+        Assert.Equal(["Authentication", "Catalogo", "Pedidos", "Clientes"], sistemas.Select(s => s.Nombre));
         Assert.All(sistemas, s =>
         {
             Assert.NotEmpty(s.Endpoints);
@@ -179,12 +180,12 @@ public class SistemasTests
     }
 
     [Fact]
-    public void Todo_lo_que_un_sistema_consume_existe_como_sistema_o_es_un_servicio_externo_conocido()
+    public void Todo_lo_que_un_sistema_consume_existe_como_sistema()
     {
         if (RaizDelRepositorio() is null) return;
 
         var sistemas = new EstructuraSistemas(DeAsistente("src/Asistente.Api/sistemas.json")).Sistemas;
-        var nombres = sistemas.Select(s => s.Nombre).Append("API de Anthropic").ToHashSet();
+        var nombres = sistemas.Select(s => s.Nombre).ToHashSet();
 
         foreach (var dependencia in sistemas.SelectMany(s => s.Consume))
             Assert.Contains(dependencia.Sistema, nombres);
@@ -215,6 +216,30 @@ public class SistemasTests
     }
 
     [Fact]
+    public void La_base_de_conocimiento_del_ecosistema_no_menciona_al_asistente_ni_a_la_IA_que_responde()
+    {
+        if (RaizDelRepositorio() is null) return;
+
+        // El ecosistema son solo los sistemas de negocio: ni el sistema ni las guías hablan del asistente que responde
+        var prohibidas = new[] { "asistente", "anthropic", "ia:apikey", "api/sistemas", "api/asistente" };
+        var textos = new List<(string Origen, string Texto)>
+        {
+            ("sistemas.json", File.ReadAllText(DeAsistente("src/Asistente.Api/sistemas.json"))),
+            ("Instrucciones.Ecosistema", Instrucciones.Ecosistema)
+        };
+        textos.AddRange(new BibliotecaDocumentos(DeAsistente("docs")).Documentos
+            .Select(d => ($"{d.Tipo}/{d.Id}", d.Contenido)));
+
+        foreach (var (origen, texto) in textos)
+        {
+            foreach (var palabra in prohibidas.Concat(origen == "Instrucciones.Ecosistema" ? [] : ["herramienta"]))
+                Assert.False(texto.Contains(palabra, StringComparison.OrdinalIgnoreCase), $"{origen} menciona '{palabra}'");
+            Assert.False(System.Text.RegularExpressions.Regex.IsMatch(texto, "claude(?! code)", System.Text.RegularExpressions.RegexOptions.IgnoreCase),
+                $"{origen} menciona a Claude");
+        }
+    }
+
+    [Fact]
     public void Los_documentos_reales_se_leen_con_titulo_y_resumen()
     {
         if (RaizDelRepositorio() is null) return;
@@ -222,7 +247,7 @@ public class SistemasTests
         var biblioteca = new BibliotecaDocumentos(DeAsistente("docs"));
 
         Assert.Equal(7, biblioteca.Documentos.Count(d => d.Tipo == "arquitectura"));
-        Assert.Equal(6, biblioteca.Documentos.Count(d => d.Tipo == "instrucciones"));
+        Assert.Equal(5, biblioteca.Documentos.Count(d => d.Tipo == "instrucciones"));
         Assert.All(biblioteca.Documentos, d =>
         {
             Assert.NotEmpty(d.Titulo);

@@ -19,8 +19,8 @@
 1. **El handler lanza excepciones; el `GlobalExceptionHandler` decide el código.** No se arma `StatusCode` en el controlador.
 2. **Las respuestas de error son siempre `ProblemDetails`** (`application/problem+json`), con `title`, `status`, `detail` y `traceId`.
 3. **Un 500 nunca expone el mensaje interno.** Responde un texto genérico y deja el detalle en el log.
-4. **Si otro servicio falla, se responde 503, no 200.** Ejemplo: Clientes no elimina un cliente si Pedidos no responde (falla cerrado), y el Asistente devuelve 503 si Catálogo está caído.
-5. **Un servicio que falla no se traga el error.** Una herramienta del asistente que no puede consultar un servicio corta la pregunta en vez de dejar que el modelo invente una respuesta.
+4. **Si otro servicio falla, se responde 503, no 200.** Ejemplo: Clientes no elimina un cliente si Pedidos no responde (falla cerrado).
+5. **Un servicio que falla no se traga el error.** Quien lo llamó responde 503 en vez de seguir con datos incompletos o inventados.
 
 ## Validación
 

@@ -26,7 +26,7 @@ public sealed class HerramientasSistemas(ConocimientoEcosistema conocimiento)
             ListarSistemas,
             "Lista todos los sistemas del ecosistema con su descripción, puertos, base de datos y de quién dependen. Úsala para dar una vista general."),
         AIFunctionFactory.Create(
-            ([Description("Nombre del sistema: Authentication, Catalogo, Pedidos, Clientes o Asistente")] string nombre) =>
+            ([Description("Nombre del sistema: Authentication, Catalogo, Pedidos o Clientes")] string nombre) =>
                 Ejecutar(registro, ObtenerSistema, () =>
                 {
                     var sistema = conocimiento.Obtener(nombre);

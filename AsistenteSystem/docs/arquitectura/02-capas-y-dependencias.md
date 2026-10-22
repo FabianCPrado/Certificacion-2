@@ -32,7 +32,7 @@ Api ──► Application ──► Domain
 ## Reglas
 
 1. **Application define interfaces; Infrastructure las implementa.** Ejemplo: `ICatalogoRepository` está en Application y `CatalogoRepository` (EF Core) en Infrastructure.
-2. **Las tecnologías viven solo en Infrastructure.** Redis, Cosmos, Mongo, Blob y el modelo de IA no aparecen en Application ni en Domain.
+2. **Las tecnologías viven solo en Infrastructure.** Redis, Cosmos, Mongo y Blob no aparecen en Application ni en Domain.
 3. **La lógica de negocio va en la entidad** (Domain), no en el controlador ni en el handler.
 4. **Controladores y endpoints delgados:** reciben, mandan a MediatR y devuelven. Nada de reglas.
 5. **Cada interfaz se registra en** `ApplicationServiceExtensions` o `InfrastructureServiceExtensions`.

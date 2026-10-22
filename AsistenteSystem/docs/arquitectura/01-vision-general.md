@@ -1,6 +1,6 @@
 # Visión general
 
-> Cinco sistemas independientes, cada uno con su base de datos, que se hablan por REST (y gRPC en un caso) y se autentican con JWT.
+> Cuatro sistemas independientes, cada uno con su base de datos, que se hablan por REST (y gRPC en un caso) y se autentican con JWT.
 
 ## Los sistemas
 
@@ -10,30 +10,29 @@
 | Catalogo | Productos, precios y stock | CatalogoDb | 7301 / 5301 |
 | Pedidos | Pedidos, líneas, auditoría, caché, imágenes, Cosmos | PedidosDb (+ Redis, Mongo, Azurite, Cosmos) | 7101 / 5101 |
 | Clientes | Clientes | ClientesDb | 7201 / 5201 |
-| Asistente | IA que responde consultando a los otros por sus APIs | Ninguna propia | 7501 / 5501 |
 
 ## Cómo se hablan
 
 ```text
-Asistente ──JWT──► Authentication
-    │                   ▲
-    ├──Bearer──► Catalogo ◄──── Pedidos (REST + gRPC, con JWT)
-    ├──────────► Pedidos  ◄──── Clientes (¿tiene pedidos?)
-    └──────────► Clientes ◄──── Pedidos (datos del cliente)
+Pedidos ──JWT──► Authentication
+   │
+   ├──REST + gRPC (con Bearer)──► Catalogo     (Catalogo valida el JWT con la misma clave)
+   ├──REST (datos del cliente)──► Clientes
+   └◄─REST (¿tiene pedidos?)───── Clientes
 ```
 
 - Cada sistema es dueño de sus datos. Nadie entra a la base de otro: se pide por su API.
 - Pedidos guarda `ClienteId` como un campo, sin clave foránea, porque el cliente vive en otra base.
 - Catalogo identifica un producto por **categoría + id**. Las líneas de pedido guardan las dos.
-- Catalogo es el único que valida JWT hoy. Pedidos, Clientes y el Asistente no exigen token a quien los llama.
+- Catalogo es el único que valida JWT hoy. Pedidos y Clientes no exigen token a quien los llama.
 
 ## Tecnología común
 
 - .NET 10, ASP.NET Core, EF Core con SQL Server (LocalDB en desarrollo).
 - Clean Architecture y CQRS con MediatR 12.5.0, FluentValidation, `ProblemDetails` para los errores.
-- Pedidos y Clientes usan controladores; Authentication, Catalogo y Asistente usan Minimal APIs.
+- Pedidos y Clientes usan controladores; Authentication y Catalogo usan Minimal APIs.
 
 ## Dónde seguir leyendo
 
-- Cómo se organiza cada sistema por dentro: `02-capas-y-dependencias`.
-- Qué rompo si cambio algo: preguntale a `POST /api/sistemas/preguntar` (ej.: "¿Qué se rompe si cambio X?").
+- Cómo se organiza cada sistema por dentro: `capas-y-dependencias`.
+- Qué se rompe si se cambia algo: los contratos de cada sistema y quién los consume.

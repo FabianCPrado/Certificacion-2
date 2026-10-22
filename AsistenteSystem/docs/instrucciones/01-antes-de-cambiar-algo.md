@@ -4,12 +4,12 @@
 
 ## 1. Entendé dónde está lo que querés cambiar
 
-- Preguntale a la IA en `POST /api/sistemas/preguntar`: "¿Dónde está lo de stock?", "¿Qué endpoints tiene Pedidos?". Busca por vos en la estructura, la arquitectura y las instrucciones.
-- Preguntale por un sistema: "¿Cómo está armado Catálogo?" te explica sus capas, endpoints y tecnologías.
+- Ubicá el sistema y la capa: cada sistema tiene sus proyectos Domain, Application, Infrastructure y Api (ver `capas-y-dependencias`).
+- Revisá los endpoints, las capas y las tecnologías del sistema para encontrar el código que te interesa.
 
 ## 2. Averiguá quién lo usa
 
-- Preguntale el impacto: "¿Qué se rompe si cambio X?" te dice qué sistemas consumen al tuyo y qué **contratos** usan.
+- Mirá qué sistemas consumen al tuyo y qué **contratos** usan: cada sistema indica de quién depende y quién lo consume.
 - Si lo que cambiás es un contrato (un DTO, una ruta, un campo), seguí `cambiar-un-contrato`.
 
 ## 3. Elegí la capa correcta
@@ -29,5 +29,5 @@
 ## 5. Dejá todo al día
 
 - Actualizá `sistemas.json` si cambiaste endpoints, puertos o dependencias.
-- Actualizá `Asistente.http` o la documentación si cambió algo que se prueba a mano.
+- Actualizá la documentación si cambió algo que se prueba a mano.
 - Commits pequeños, en español, uno por sistema, y no se hace push a `main` sin revisión.

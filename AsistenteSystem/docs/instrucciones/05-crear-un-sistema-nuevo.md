@@ -7,19 +7,18 @@
 1. **Nombre:** por ejemplo `Proveedores` genera la carpeta `ProveedoresSystem` y los namespaces `Proveedores.*`.
 2. **Base de datos:** una `[Nombre]Db` nueva en SQL Server LocalDB, salvo que haya una razón para otra cosa.
 3. **Ruta base:** por ejemplo `api/proveedores`.
-4. **Puertos libres** (https / http). Hoy están ocupados 7101, 7201, 7301, 7401 y 7501 (y sus http 5101 a 5501): usá el siguiente.
+4. **Puertos libres** (https / http). Hoy están ocupados del 7101 al 7501 de a cien (y sus http 5101 a 5501): usá el siguiente libre.
 
 ## Pasos
 
-1. En Claude Code, ejecutá el comando `/crear-api`. Te pregunta lo anterior y genera Domain, Application, Infrastructure, Api y los tests.
+1. Ejecutá el comando `/crear-api`. Te pregunta lo anterior y genera Domain, Application, Infrastructure, Api y los tests.
 2. **Revisá que compile sin avisos:** `dotnet build` y `dotnet test`.
 3. **Script SQL:** agregalo en `sql/` con el mismo estilo (crea la base desde cero y es idempotente) y sumalo al README de `sql/` respetando el orden.
 4. **Seguridad:** decidí si exige JWT. Si va a llamar a Catalogo, necesita un cliente de servicio en Authentication y su secreto en User Secrets.
 5. **Documentación:**
    - README del sistema y una fila en el README raíz (servicios y puertos).
-   - Una entrada en `sistemas.json` para que la IA de Sistemas (`POST /api/sistemas/preguntar`) lo conozca.
-6. **Si el Asistente va a consultarlo:** seguí `agregar-una-herramienta-al-asistente`.
-7. **Commits** pequeños, en español, en la rama `feature/[nombre]`, sin push a `main`.
+   - Una entrada en `sistemas.json` con sus capas, endpoints, dependencias y contratos.
+6. **Commits** pequeños, en español, en la rama `feature/[nombre]`, sin push a `main`.
 
 ## Reglas heredadas del proyecto
 

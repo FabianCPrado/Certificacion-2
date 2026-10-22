@@ -1,6 +1,6 @@
 # Levantar y probar el entorno
 
-> Cómo dejar los cinco sistemas funcionando en tu máquina y probar el asistente.
+> Cómo dejar los cuatro sistemas funcionando en tu máquina.
 
 ## 1. Bases de datos
 
@@ -10,34 +10,29 @@ Ejecutá los scripts de `sql/` en orden sobre `(localdb)\MSSQLLocalDB` (ver `sql
 
 ## 2. Secretos (una sola vez)
 
-Los comandos están en `AuthenticationSystem/README.md`: `Jwt:SigningKey` (Authentication y Catalogo), `ClientCredentials:PedidosSecret`, `ClientCredentials:AsistenteSecret` y, para el asistente, `Authentication:ClientSecret` e `IA:ApiKey`.
+Los comandos están en `AuthenticationSystem/README.md`: `Jwt:SigningKey` (Authentication y Catalogo) y `ClientCredentials:PedidosSecret` (Authentication y Pedidos).
 
 ## 3. Levantar los sistemas
 
 Cada uno en su terminal (o con F5 en VS Code), **en este orden**:
 
 ```text
-Authentication (7401) → Catalogo (7301) → Pedidos (7101) → Clientes (7201) → Asistente (7501)
+Authentication (7401) → Catalogo (7301) → Pedidos (7101) → Clientes (7201)
 ```
 
 Pedidos puede avisar de Cosmos (puerto 8083) si no tenés Docker corriendo: es solo para las demos de la clase 5 y no impide arrancar.
 
 ## 4. Verificar que está todo conectado
 
-`GET https://localhost:7501/api/asistente/salud` debe devolver 200 con todos los componentes en `Ok`.
+Abrí el Swagger de cada sistema (`https://localhost:<puerto>/swagger`) y probá un endpoint de lectura.
 
-| Si dice... | Qué falta |
+| Si pasa... | Qué falta |
 |---|---|
-| `Authentication` en Error | Authentication no está corriendo, o falta el cliente `asistente-service` o su secreto |
-| `Catalogo`: "Sin JWT" | Authentication no entrega el token |
-| `Catalogo`: HTTP 403 | Falta la policy `LecturaCatalogo` en Catalogo |
-| `Pedidos` o `Clientes` en Error | No están corriendo |
-| `Modelo`: SinConfigurar | Falta `IA:ApiKey` |
-
-## 5. Probar
-
-- Swagger del Asistente: `https://localhost:7501/swagger` (el cuerpo de `preguntar` ya trae un cliente de ejemplo).
-- O abrí `Asistente.http` en VS Code (extensión REST Client) y ejecutá las peticiones.
+| Authentication no responde | No está corriendo, o falta `ClientCredentials:PedidosSecret` |
+| Catalogo responde 401 | Falta el token, o `Jwt:SigningKey` no es el mismo en Authentication y Catalogo |
+| Catalogo responde 403 | El cliente de servicio no tiene permiso para esa operación |
+| Pedidos responde 503 | Catalogo o Clientes no están corriendo |
+| Clientes responde 503 al eliminar | Pedidos no está corriendo |
 
 ## Problemas conocidos
 
