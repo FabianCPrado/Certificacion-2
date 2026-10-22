@@ -55,27 +55,44 @@ public static class InfrastructureServiceExtensions
     // configuración posterior (p. ej. en los tests) también se respeta.
     private static void AgregarAsistente(IServiceCollection services)
     {
+        // Las dos IAs (negocio y sistemas) comparten un único cliente de Claude
+        services.AddSingleton(proveedores => CrearModelo(proveedores));
+        services.AddSingleton<HerramientasSistemas>();
+
         services.AddSingleton<IAsistente>(proveedores =>
-        {
-            var configuration = proveedores.GetRequiredService<IConfiguration>();
-            var usaAnthropic = string.Equals(configuration["IA:Proveedor"], "Anthropic", StringComparison.OrdinalIgnoreCase);
-            var apiKey = configuration["IA:ApiKey"];
+            proveedores.GetRequiredService<ModeloConfigurado>() is { Chat: { } chat } modelo
+                ? new AsistenteIA(chat, proveedores.GetRequiredService<Herramientas>(), modelo.Nombre,
+                    proveedores.GetRequiredService<ILogger<AsistenteIA>>())
+                : new AsistenteNoConfigurado());
 
-            if (!usaAnthropic || string.IsNullOrWhiteSpace(apiKey))
-                return new AsistenteNoConfigurado();
+        services.AddSingleton<ISistemasAsistente>(proveedores =>
+            proveedores.GetRequiredService<ModeloConfigurado>() is { Chat: { } chat } modelo
+                ? new SistemasIA(chat, proveedores.GetRequiredService<HerramientasSistemas>(), modelo.Nombre,
+                    proveedores.GetRequiredService<ILogger<SistemasIA>>())
+                : new SistemasNoConfigurado());
+    }
 
-            var modelo = configuration["IA:ModeloChat"] ?? "claude-haiku-5-5";
-            var maxIteraciones = configuration.GetValue("IA:MaxIteraciones", 5);
+    /// <summary>El cliente de Claude y su nombre; <c>Chat</c> es null si falta IA:Proveedor = Anthropic o IA:ApiKey.</summary>
+    private sealed record ModeloConfigurado(IChatClient? Chat, string Nombre);
 
-            var chat = new AnthropicClient { ApiKey = apiKey }
-                .AsIChatClient(modelo)
-                .AsBuilder()
-                .UseFunctionInvocation(proveedores.GetService<ILoggerFactory>(), f => f.MaximumIterationsPerRequest = maxIteraciones)
-                .Build();
+    private static ModeloConfigurado CrearModelo(IServiceProvider proveedores)
+    {
+        var configuration = proveedores.GetRequiredService<IConfiguration>();
+        var usaAnthropic = string.Equals(configuration["IA:Proveedor"], "Anthropic", StringComparison.OrdinalIgnoreCase);
+        var apiKey = configuration["IA:ApiKey"];
+        var nombre = configuration["IA:ModeloChat"] ?? "claude-haiku-5-5";
 
-            return new AsistenteIA(
-                chat, proveedores.GetRequiredService<Herramientas>(), modelo, proveedores.GetRequiredService<ILogger<AsistenteIA>>());
-        });
+        if (!usaAnthropic || string.IsNullOrWhiteSpace(apiKey))
+            return new ModeloConfigurado(null, nombre);
+
+        var maxIteraciones = configuration.GetValue("IA:MaxIteraciones", 8);
+        var chat = new AnthropicClient { ApiKey = apiKey }
+            .AsIChatClient(nombre)
+            .AsBuilder()
+            .UseFunctionInvocation(proveedores.GetService<ILoggerFactory>(), f => f.MaximumIterationsPerRequest = maxIteraciones)
+            .Build();
+
+        return new ModeloConfigurado(chat, nombre);
     }
 
     private static IHttpClientBuilder AgregarCliente(IServiceCollection services, string nombre, string? url) =>

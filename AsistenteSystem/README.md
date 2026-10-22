@@ -18,7 +18,7 @@ Servicio de IA de **Certificacion-2**. Recibe preguntas en lenguaje natural y la
 src/
   Asistente.Domain          Fuente, HerramientaInfo, SistemaInfo y tipos de la base de conocimiento
   Asistente.Application     IAsistente, puertos de consulta, queries + validators, behaviors (MediatR 12.5.0)
-  Asistente.Infrastructure  IA (AsistenteIA, Herramientas), Servicios (consultas HTTP, TokenProvider, healthcheck), Mapa (lectura de archivos)
+  Asistente.Infrastructure  IA (AsistenteIA, SistemasIA, Herramientas, HerramientasSistemas), Servicios (consultas HTTP, TokenProvider, healthcheck), Mapa (lectura de archivos)
   Asistente.Api             Minimal APIs, GlobalExceptionHandler (ProblemDetails), mapa-sistema.json, sistemas.json
 docs/
   base-conocimiento         Las APIs de los otros sistemas, verificadas contra el código
@@ -36,14 +36,9 @@ tests/
 | `POST /api/asistente/preguntar` | Responde una pregunta con Claude y datos reales de los otros sistemas (400 si es inválida, 503 si falta la clave o un servicio no responde) |
 | `GET /api/asistente/herramientas` | Lista el mapa: las 5 herramientas de solo lectura |
 | `GET /api/asistente/salud` | Comprueba Authentication, Catálogo, Pedidos, Clientes y el modelo (200 o 503) |
-| `GET /api/sistemas` | Lista los sistemas con puertos, base de datos y dependencias |
-| `GET /api/sistemas/{nombre}` | La estructura completa de un sistema (capas, endpoints, contratos, tests, notas) |
-| `GET /api/sistemas/{nombre}/impacto` | Qué sistemas lo consumen: qué se rompe si lo cambiás |
-| `GET /api/sistemas/buscar?texto=` | Busca en la estructura, la arquitectura y las instrucciones |
-| `GET /api/sistemas/arquitectura[/{id}]` | Documentos de arquitectura |
-| `GET /api/sistemas/instrucciones[/{id}]` | Guías paso a paso |
+| `POST /api/sistemas/preguntar` | Apartado **Sistemas**: un único endpoint donde le preguntás a la IA todo lo que necesites saber del ecosistema (estructura, dependencias, qué se rompe si cambiás algo, arquitectura, guías paso a paso). No consulta datos de negocio |
 
-La estructura de los sistemas sale de `src/Asistente.Api/sistemas.json` y los documentos de `docs/arquitectura` y `docs/instrucciones` (Markdown: se leen en el repo y también por la API). **Si cambiás un sistema, actualizá `sistemas.json`.** Una prueba vigila que los puertos coincidan con los `launchSettings.json`.
+Para responder, la IA de Sistemas consulta `src/Asistente.Api/sistemas.json` (la estructura) y los documentos de `docs/arquitectura` y `docs/instrucciones` (Markdown, que también se leen en el repo). Responde solo con lo que encuentra ahí, y cita de dónde sale cada dato. **Si cambiás un sistema, actualizá `sistemas.json`.** Una prueba vigila que los puertos coincidan con los `launchSettings.json`.
 
 ## Correrlo
 

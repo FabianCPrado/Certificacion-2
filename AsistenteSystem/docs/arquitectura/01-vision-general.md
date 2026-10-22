@@ -36,4 +36,4 @@ Asistente ──JWT──► Authentication
 ## Dónde seguir leyendo
 
 - Cómo se organiza cada sistema por dentro: `02-capas-y-dependencias`.
-- Qué rompo si cambio algo: `GET /api/sistemas/{nombre}/impacto`.
+- Qué rompo si cambio algo: preguntale a `POST /api/sistemas/preguntar` (ej.: "¿Qué se rompe si cambio X?").

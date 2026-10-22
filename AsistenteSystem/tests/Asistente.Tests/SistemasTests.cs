@@ -35,18 +35,21 @@ public class SistemasTests
     private static readonly SistemaInfo Asistente = Sistema(
         "Asistente", consume: [new("Catalogo", "Precio y stock", "REST"), new("API de Anthropic", "El modelo", "HTTPS")]);
 
-    private static readonly EstructuraFalsa Estructura = new(Catalogo, Pedidos, Asistente);
-
-    private static readonly BibliotecaFalsa Biblioteca = new(
+    private static readonly DocumentoInfo[] Documentos =
+    [
         new("capas", "arquitectura", "Capas y dependencias", "Cuatro proyectos por sistema", "# Capas\nDomain no referencia a nadie"),
-        new("agregar-endpoint", "instrucciones", "Agregar un endpoint", "Pasos de adentro hacia afuera", "# Agregar\n1. Domain\n2. Application"));
+        new("agregar-endpoint", "instrucciones", "Agregar un endpoint", "Pasos de adentro hacia afuera", "# Agregar\n1. Domain\n2. Application")
+    ];
+
+    private static ConocimientoEcosistema Conocimiento() =>
+        new(new EstructuraFalsa(Catalogo, Pedidos, Asistente), new BibliotecaFalsa(Documentos));
 
     // --- Lista y detalle -----------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task Lista_los_sistemas_con_su_resumen()
+    public void Lista_los_sistemas_con_su_resumen()
     {
-        var lista = await new ListarSistemasQueryHandler(Estructura).Handle(new ListarSistemasQuery(), default);
+        var lista = Conocimiento().Listar();
 
         Assert.Equal(["Catalogo", "Pedidos", "Asistente"], lista.Select(s => s.Nombre));
         Assert.Equal(1, lista[0].CantidadEndpoints);
@@ -58,18 +61,13 @@ public class SistemasTests
     [InlineData("pedidos")]
     [InlineData("PedidosSystem")]
     [InlineData(" PEDIDOS ")]
-    public async Task Encuentra_un_sistema_por_nombre_o_carpeta_sin_importar_mayusculas(string nombre)
-    {
-        var sistema = await new ObtenerSistemaQueryHandler(Estructura).Handle(new ObtenerSistemaQuery(nombre), default);
-
-        Assert.Equal("Pedidos", sistema.Nombre);
-    }
+    public void Encuentra_un_sistema_por_nombre_o_carpeta_sin_importar_mayusculas(string nombre) =>
+        Assert.Equal("Pedidos", Conocimiento().Obtener(nombre).Nombre);
 
     [Fact]
-    public async Task Un_sistema_inexistente_da_404_y_lista_los_validos()
+    public void Un_sistema_inexistente_falla_y_lista_los_validos()
     {
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => new ObtenerSistemaQueryHandler(Estructura).Handle(new ObtenerSistemaQuery("Facturas"), default));
+        var ex = Assert.Throws<NotFoundException>(() => Conocimiento().Obtener("Facturas"));
 
         Assert.Contains("Catalogo, Pedidos, Asistente", ex.Message);
     }
@@ -77,9 +75,9 @@ public class SistemasTests
     // --- Impacto -------------------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task Impacto_dice_quien_consume_al_sistema_y_que_contratos_usan()
+    public void Impacto_dice_quien_consume_al_sistema_y_que_contratos_usan()
     {
-        var impacto = await new ImpactoDeSistemaQueryHandler(Estructura).Handle(new ImpactoDeSistemaQuery("catalogo"), default);
+        var impacto = Conocimiento().Impacto("catalogo");
 
         Assert.Equal(["Pedidos", "Asistente"], impacto.LoConsumen.Select(c => c.Sistema));
         Assert.Equal("ProductoDto", impacto.Contratos.Single().Nombre);
@@ -87,9 +85,9 @@ public class SistemasTests
     }
 
     [Fact]
-    public async Task Impacto_de_un_sistema_que_nadie_llama_lo_dice()
+    public void Impacto_de_un_sistema_que_nadie_llama_lo_dice()
     {
-        var impacto = await new ImpactoDeSistemaQueryHandler(Estructura).Handle(new ImpactoDeSistemaQuery("Asistente"), default);
+        var impacto = Conocimiento().Impacto("Asistente");
 
         Assert.Empty(impacto.LoConsumen);
         Assert.Contains("Ningún otro sistema", impacto.Resumen);
@@ -103,56 +101,51 @@ public class SistemasTests
     [InlineData("anthropic", "Dependencia")]
     [InlineData("dependencias", "Arquitectura")]
     [InlineData("adentro", "Instrucciones")]
-    public async Task La_busqueda_encuentra_en_cada_tipo_sin_importar_mayusculas_ni_tildes(string texto, string tipo)
-    {
-        var busqueda = await new BuscarConocimientoQueryHandler(Estructura, Biblioteca).Handle(new BuscarConocimientoQuery(texto), default);
-
-        Assert.Contains(busqueda.Resultados, r => r.Tipo == tipo);
-    }
+    public void La_busqueda_encuentra_en_cada_tipo_sin_importar_mayusculas(string texto, string tipo) =>
+        Assert.Contains(Conocimiento().Buscar(texto).Resultados, r => r.Tipo == tipo);
 
     [Fact]
-    public async Task La_busqueda_ignora_tildes()
+    public void La_busqueda_ignora_tildes()
     {
         // "Pedidós" (con tilde) encuentra al sistema "Pedidos" (sin tilde)
-        var busqueda = await new BuscarConocimientoQueryHandler(Estructura, Biblioteca).Handle(new BuscarConocimientoQuery("Pedidós"), default);
+        var busqueda = Conocimiento().Buscar("Pedidós");
 
         Assert.Contains(busqueda.Resultados, r => r.Tipo == "Sistema" && r.Donde == "Pedidos");
     }
 
     [Fact]
-    public async Task Una_busqueda_sin_resultados_devuelve_total_cero()
-    {
-        var busqueda = await new BuscarConocimientoQueryHandler(Estructura, Biblioteca).Handle(new BuscarConocimientoQuery("zzzzz"), default);
-
-        Assert.Equal(0, busqueda.Total);
-    }
-
-    [Theory]
-    [InlineData("", false)]
-    [InlineData("a", false)]
-    [InlineData("ab", true)]
-    public void El_texto_a_buscar_tiene_entre_2_y_100_caracteres(string texto, bool valido) =>
-        Assert.Equal(valido, new BuscarConocimientoQueryValidator().Validate(new BuscarConocimientoQuery(texto)).IsValid);
+    public void Una_busqueda_sin_resultados_devuelve_total_cero() =>
+        Assert.Equal(0, Conocimiento().Buscar("zzzzz").Total);
 
     // --- Documentos ----------------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task Lista_solo_los_documentos_del_tipo_pedido()
+    public void Lista_los_documentos_de_un_tipo_o_todos()
     {
-        var lista = await new ListarDocumentosQueryHandler(Biblioteca).Handle(new ListarDocumentosQuery("arquitectura"), default);
-
-        Assert.Equal("capas", lista.Single().Id);
+        Assert.Equal("arquitectura/capas", Conocimiento().Documentos("arquitectura").Single().Id);
+        Assert.Equal(2, Conocimiento().Documentos().Count);
     }
+
+    [Theory]
+    [InlineData("instrucciones", "agregar-endpoint")]
+    [InlineData("INSTRUCCIONES", "instrucciones/agregar-endpoint")]
+    public void Obtiene_un_documento_completo_con_o_sin_el_tipo_en_el_id(string tipo, string id) =>
+        Assert.Contains("2. Application", Conocimiento().Documento(tipo, id).Contenido);
 
     [Fact]
-    public async Task Obtiene_un_documento_completo_y_da_404_si_no_existe()
+    public void Un_documento_de_otro_tipo_no_existe_y_lista_los_validos()
     {
-        var documento = await new ObtenerDocumentoQueryHandler(Biblioteca).Handle(new ObtenerDocumentoQuery("instrucciones", "agregar-endpoint"), default);
-        Assert.Contains("2. Application", documento.Contenido);
+        var ex = Assert.Throws<NotFoundException>(() => Conocimiento().Documento("instrucciones", "capas"));
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => new ObtenerDocumentoQueryHandler(Biblioteca).Handle(new ObtenerDocumentoQuery("instrucciones", "capas"), default));
+        Assert.Contains("agregar-endpoint", ex.Message);
     }
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("ab", false)]
+    [InlineData("¿Qué sistemas hay?", true)]
+    public void La_pregunta_sobre_sistemas_tiene_entre_3_y_500_caracteres(string pregunta, bool valida) =>
+        Assert.Equal(valida, new PreguntarSobreSistemasQueryValidator().Validate(new PreguntarSobreSistemasQuery(pregunta)).IsValid);
 
     // --- Los archivos reales -------------------------------------------------------------------------------------------
 

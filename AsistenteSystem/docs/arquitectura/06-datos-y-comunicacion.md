@@ -33,4 +33,4 @@ Lo que un sistema expone y otro consume es un **contrato**. Cambiarlo sin avisar
 - `PedidoDto`, `LineaPedidoDto` y `/api/pedidos/detalle` de Pedidos los usa el Asistente.
 - `GET /api/pedidos?clienteId=` lo usa Clientes para saber si un cliente tiene pedidos.
 
-Antes de cambiar uno, consultá `GET /api/sistemas/{nombre}/impacto`.
+Antes de cambiar uno, preguntale a `POST /api/sistemas/preguntar` qué se rompe.

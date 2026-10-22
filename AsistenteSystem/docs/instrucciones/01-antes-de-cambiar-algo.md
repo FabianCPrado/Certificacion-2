@@ -4,12 +4,12 @@
 
 ## 1. Entendé dónde está lo que querés cambiar
 
-- `GET /api/sistemas/buscar?texto=...` busca en la estructura, la arquitectura y las instrucciones. Por ejemplo `texto=stock` o `texto=detalle`.
-- `GET /api/sistemas/{nombre}` muestra las capas, los endpoints y las tecnologías de un sistema.
+- Preguntale a la IA en `POST /api/sistemas/preguntar`: "¿Dónde está lo de stock?", "¿Qué endpoints tiene Pedidos?". Busca por vos en la estructura, la arquitectura y las instrucciones.
+- Preguntale por un sistema: "¿Cómo está armado Catálogo?" te explica sus capas, endpoints y tecnologías.
 
 ## 2. Averiguá quién lo usa
 
-- `GET /api/sistemas/{nombre}/impacto` lista los sistemas que consumen al tuyo y los **contratos** que usan.
+- Preguntale el impacto: "¿Qué se rompe si cambio X?" te dice qué sistemas consumen al tuyo y qué **contratos** usan.
 - Si lo que cambiás es un contrato (un DTO, una ruta, un campo), seguí `cambiar-un-contrato`.
 
 ## 3. Elegí la capa correcta

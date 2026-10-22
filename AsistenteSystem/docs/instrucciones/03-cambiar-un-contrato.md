@@ -4,7 +4,7 @@
 
 ## Paso a paso
 
-1. **Averiguá quién lo consume:** `GET /api/sistemas/{nombre}/impacto`. Ahí aparecen los sistemas y el contrato exacto.
+1. **Averiguá quién lo consume:** preguntale a `POST /api/sistemas/preguntar` "¿Qué se rompe si cambio X de {sistema}?". Te dice qué sistemas lo consumen y el contrato exacto.
 2. **Preferí agregar a modificar.** Agregar un campo opcional o una ruta nueva no rompe a nadie; renombrar o quitar algo sí.
 3. **Si tenés que romper la compatibilidad:**
    - Primero agregá lo nuevo manteniendo lo viejo.
@@ -26,4 +26,4 @@
 
 ## Qué contratos tiene hoy el proyecto
 
-Mirá la sección `contratos` de cada sistema en `GET /api/sistemas/{nombre}`.
+Preguntale a `POST /api/sistemas/preguntar` por los contratos de un sistema: está en la sección `contratos` de `sistemas.json`.

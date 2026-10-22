@@ -9,7 +9,7 @@ namespace Asistente.Infrastructure.IA;
 /// </summary>
 public sealed class AsistenteNoConfigurado : IAsistente
 {
-    private const string Mensaje = "El modelo de IA no está configurado: falta IA:Proveedor = Anthropic o la clave IA:ApiKey (User Secrets).";
+    internal const string Mensaje = "El modelo de IA no está configurado: falta IA:Proveedor = Anthropic o la clave IA:ApiKey (User Secrets).";
 
     public Task<RespuestaDto> ResponderAsync(PreguntaRequest pregunta, CancellationToken cancellationToken = default) =>
         throw new ServicioNoDisponibleException(Mensaje);

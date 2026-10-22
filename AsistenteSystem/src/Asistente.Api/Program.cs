@@ -3,6 +3,7 @@ using Asistente.Api.Endpoints;
 using Asistente.Api.Infrastructure;
 using Asistente.Application;
 using Asistente.Application.Asistente;
+using Asistente.Application.Sistemas;
 using Asistente.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +31,15 @@ builder.Services.AddOpenApi(opciones => opciones.AddSchemaTransformer((esquema, 
                 ["pregunta"] = "¿Qué productos compré en mis últimos pedidos?",
                 ["clienteId"] = string.IsNullOrWhiteSpace(clienteEjemplo) ? null : clienteEjemplo
             }
+        ];
+    }
+
+    // Ejemplo del cuerpo de /api/sistemas/preguntar
+    if (contexto.JsonTypeInfo.Type == typeof(PreguntaSistemasRequest))
+    {
+        esquema.Examples =
+        [
+            new JsonObject { ["pregunta"] = "¿Qué se rompe si cambio el DTO de productos de Catálogo?" }
         ];
     }
 

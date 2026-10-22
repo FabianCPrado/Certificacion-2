@@ -17,7 +17,7 @@
 4. **Seguridad:** decidí si exige JWT. Si va a llamar a Catalogo, necesita un cliente de servicio en Authentication y su secreto en User Secrets.
 5. **Documentación:**
    - README del sistema y una fila en el README raíz (servicios y puertos).
-   - Una entrada en `sistemas.json` para que aparezca en `GET /api/sistemas`.
+   - Una entrada en `sistemas.json` para que la IA de Sistemas (`POST /api/sistemas/preguntar`) lo conozca.
 6. **Si el Asistente va a consultarlo:** seguí `agregar-una-herramienta-al-asistente`.
 7. **Commits** pequeños, en español, en la rama `feature/[nombre]`, sin push a `main`.
 

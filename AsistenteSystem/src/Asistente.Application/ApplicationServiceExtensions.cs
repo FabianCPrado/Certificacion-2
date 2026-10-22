@@ -20,6 +20,9 @@ public static class ApplicationServiceExtensions
 
         services.AddValidatorsFromAssembly(assembly);
 
+        // Consultas sobre el ecosistema que usa la IA como herramientas (sus puertos los registra Infrastructure)
+        services.AddSingleton<Sistemas.ConocimientoEcosistema>();
+
         return services;
     }
 }

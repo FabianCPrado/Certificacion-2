@@ -175,20 +175,15 @@
       "tecnologias": [".NET 10", "Minimal APIs", "MediatR 12.5.0", "FluentValidation", "Microsoft.Extensions.AI", "SDK de Anthropic (Claude)", "Swagger UI"],
       "capas": [
         { "proyecto": "Asistente.Api", "responsabilidad": "Endpoints (Asistente y Sistemas), mapa-sistema.json, sistemas.json, GlobalExceptionHandler y arranque" },
-        { "proyecto": "Asistente.Application", "responsabilidad": "Casos de uso (preguntar, herramientas, salud, sistemas), puertos (IAsistente, ICatalogoConsultas, IPedidosConsultas, IClientesConsultas, IVerificadorSalud) y behaviors" },
+        { "proyecto": "Asistente.Application", "responsabilidad": "Casos de uso (preguntar, herramientas, salud, preguntar sobre sistemas), ConocimientoEcosistema, puertos (IAsistente, ISistemasAsistente, ICatalogoConsultas, IPedidosConsultas, IClientesConsultas, IVerificadorSalud) y behaviors" },
         { "proyecto": "Asistente.Domain", "responsabilidad": "Tipos simples: Fuente, HerramientaInfo y la estructura de sistemas" },
-        { "proyecto": "Asistente.Infrastructure", "responsabilidad": "IA (AsistenteIA, Herramientas, Instrucciones), Servicios (consultas HTTP, TokenProvider, BearerTokenHandler, VerificadorSalud) y Mapa (lectura de los archivos de conocimiento)" }
+        { "proyecto": "Asistente.Infrastructure", "responsabilidad": "IA (AsistenteIA, SistemasIA, Herramientas, HerramientasSistemas, Instrucciones), Servicios (consultas HTTP, TokenProvider, BearerTokenHandler, VerificadorSalud) y Mapa (lectura de los archivos de conocimiento)" }
       ],
       "endpoints": [
         { "metodo": "POST", "ruta": "/api/asistente/preguntar", "descripcion": "Responde una pregunta (body: pregunta de 3 a 500 caracteres, clienteId opcional) con datos reales. 200, 400 o 503.", "acceso": "Abierto" },
         { "metodo": "GET", "ruta": "/api/asistente/herramientas", "descripcion": "Las herramientas que conoce el asistente (el mapa del sistema).", "acceso": "Abierto" },
         { "metodo": "GET", "ruta": "/api/asistente/salud", "descripcion": "Comprueba Authentication, Catalogo, Pedidos, Clientes y el modelo. 200 si todo responde, 503 si no.", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas", "descripcion": "Lista de sistemas con un resumen.", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas/{nombre}", "descripcion": "Estructura completa de un sistema.", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas/{nombre}/impacto", "descripcion": "Qué sistemas consumen a este y qué contratos usan.", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas/buscar", "descripcion": "Busca un texto en sistemas, arquitectura e instrucciones (query texto).", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas/arquitectura", "descripcion": "Lista los documentos de arquitectura; /arquitectura/{id} devuelve uno.", "acceso": "Abierto" },
-        { "metodo": "GET", "ruta": "/api/sistemas/instrucciones", "descripcion": "Lista las guías paso a paso; /instrucciones/{id} devuelve una.", "acceso": "Abierto" }
+        { "metodo": "POST", "ruta": "/api/sistemas/preguntar", "descripcion": "Apartado Sistemas: un único endpoint donde se le pregunta a la IA sobre el ecosistema (estructura, dependencias, impacto de un cambio, arquitectura, guías paso a paso). Body: pregunta de 3 a 500 caracteres. Responde con fuentes y consumo; no consulta datos de negocio.", "acceso": "Abierto" }
       ],
       "consume": [
         { "sistema": "Authentication", "para": "Obtener su JWT (cliente asistente-service), solo cuando una herramienta lo necesita", "como": "POST /api/tokens; el token se guarda en memoria hasta 1 minuto antes de vencer" },
@@ -199,6 +194,7 @@
       ],
       "contratos": [
         { "nombre": "POST /api/asistente/preguntar", "descripcion": "{ pregunta, clienteId? } devuelve { respuesta, fuentes[], herramientasUsadas[] }", "usadoPor": ["Cualquier front o cliente HTTP"] },
+        { "nombre": "POST /api/sistemas/preguntar", "descripcion": "{ pregunta } devuelve { respuesta, fuentes[], herramientasUsadas[], uso }", "usadoPor": ["Cualquier front o cliente HTTP"] },
         { "nombre": "mapa-sistema.json", "descripcion": "Las herramientas permitidas; el servicio no arranca si no coinciden con el código", "usadoPor": ["Asistente"] }
       ],
       "tests": ["Asistente.Tests", "Asistente.IntegrationTests"],
@@ -207,7 +203,9 @@
         "El email del cliente nunca llega al modelo.",
         "Los tests de integración fuerzan IA:ApiKey vacía: nunca llaman a Claude.",
         "Si un servicio falla durante una pregunta, responde 503 en vez de dejar que el modelo improvise.",
-        "Al agregar una herramienta, actualizar mapa-sistema.json y Herramientas.cs a la vez."
+        "Al agregar una herramienta, actualizar mapa-sistema.json y Herramientas.cs a la vez.",
+        "Hay dos IAs que comparten el mismo cliente de Claude: AsistenteIA (datos de negocio, herramientas del mapa) y SistemasIA (el ecosistema, herramientas de HerramientasSistemas sobre sistemas.json y docs/).",
+        "Para que SistemasIA conozca un cambio, hay que actualizar sistemas.json o los documentos de docs/arquitectura y docs/instrucciones: la IA responde solo con lo que encuentra ahí."
       ]
     }
   ]
