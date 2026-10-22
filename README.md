@@ -6,6 +6,7 @@ Proyecto transversal del curso (LT Tech, .NET 10). Son **dos microservicios inde
 |---|---|---|---|
 | [`PedidosSystem/`](PedidosSystem) | Pedidos, productos, auditoría, caché, imágenes y Cosmos | SQL Server LocalDB `PedidosDb` (+ Redis, Mongo, Azurite, Cosmos) | 7101 / 5101 |
 | [`ClientesSystem/`](ClientesSystem) | Clientes | SQL Server LocalDB `ClientesDb` | 7201 / 5201 |
+| [`AsistenteSystem/`](AsistenteSystem) | Asistente de IA (consulta a los otros servicios por sus APIs; solo lectura) | Ninguna propia | 7501 / 5501 |
 
 Los dos usan **Clean Architecture** (`Domain` → `Application` → `Infrastructure` → `Api`), **CQRS con MediatR 12.5.0**, FluentValidation y un `GlobalExceptionHandler` que responde con `ProblemDetails`. Cada servicio tiene su propio README con el detalle: [PedidosSystem/README.md](PedidosSystem/README.md) y [ClientesSystem/README.md](ClientesSystem/README.md).
 

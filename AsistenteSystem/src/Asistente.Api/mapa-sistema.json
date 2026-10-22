@@ -1,0 +1,14 @@
+{
+  "herramientas": [
+    { "nombre": "ObtenerPrecioYStock", "servicio": "Catalogo", "endpoint": "GET /api/productos/{categoria}/{id}",
+      "descripcion": "Devuelve precio y stock de un producto por categoría e id.", "soloLectura": true },
+    { "nombre": "BuscarProductos", "servicio": "Catalogo", "endpoint": "GET /api/productos/buscar?categoria=&nombre=",
+      "descripcion": "Busca productos por nombre dentro de una categoría.", "soloLectura": true },
+    { "nombre": "UltimosPedidosDeCliente", "servicio": "Pedidos", "endpoint": "GET /api/pedidos?clienteId=&pagina=1&tamanio=",
+      "descripcion": "Devuelve los últimos pedidos de un cliente con sus líneas.", "soloLectura": true },
+    { "nombre": "EstadoDePedido", "servicio": "Pedidos", "endpoint": "GET /api/pedidos/{id}",
+      "descripcion": "Devuelve el estado de un pedido.", "soloLectura": true },
+    { "nombre": "DatosDeCliente", "servicio": "Clientes", "endpoint": "GET /api/clientes/{id}",
+      "descripcion": "Devuelve nombre y datos básicos del cliente (sin datos sensibles).", "soloLectura": true }
+  ]
+}
