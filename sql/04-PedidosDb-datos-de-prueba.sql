@@ -1,6 +1,8 @@
 -- Datos de prueba para las demos de la Clase 4 (base PedidosDb).
 -- Carga 100 clientes y 1.000 pedidos con 3 líneas cada uno. Los productos viven en el servicio Catálogo:
--- las líneas guardan un id y una categoría de ejemplo (no hace falta que existan en CatalogoDb para las demos de consultas).
+-- cada línea toma id, categoría, nombre y precio de un producto real de CatalogoDb, así que se puede consultar su
+-- precio y su stock. Cada cliente tiene 5 productos favoritos que se repiten en sus pedidos ("lo de siempre").
+-- Requiere haber ejecutado antes 03-CatalogoDb-crear.sql (misma instancia).
 -- Es idempotente: si ya hay clientes, no hace nada.
 SET NOCOUNT ON;
 
@@ -9,6 +11,17 @@ BEGIN
     PRINT 'Ya hay datos de prueba: no se carga nada.';
     RETURN;
 END;
+
+IF DB_ID('CatalogoDb') IS NULL
+    THROW 50001, 'No existe CatalogoDb: ejecuta antes 03-CatalogoDb-crear.sql.', 1;
+
+-- Catálogo numerado, para repartir los productos entre los clientes
+SELECT ROW_NUMBER() OVER (ORDER BY Categoria, Nombre, Id) AS rn, Id, Categoria, Nombre, Precio
+INTO #cat FROM CatalogoDb.dbo.Productos;
+
+DECLARE @n INT = (SELECT COUNT(*) FROM #cat);
+IF @n < 13
+    THROW 50002, 'CatalogoDb tiene muy pocos productos: ejecuta 03-CatalogoDb-crear.sql.', 1;
 
 -- 100 clientes
 ;WITH n AS (
@@ -34,15 +47,14 @@ SELECT p.PedidoId, c.Id, c.Email,
 FROM #ped p
 JOIN #cli c ON c.rn = (p.i % 100) + 1;
 
--- 3 líneas por pedido, con productos de ejemplo distintos
+-- 3 líneas por pedido con productos reales del Catálogo. El cliente número c = (i % 100) + 1 tiene 5 favoritos:
+-- favorito j = (c * 7 + j * 3) % N; la línea k del pedido i usa el favorito j = ((i / 100) + k) % 5.
 INSERT INTO LineasPedido (Id, PedidoId, ProductoId, Categoria, NombreProducto, PrecioUnitario, Moneda, Cantidad)
-SELECT NEWID(), p.PedidoId, CONVERT(NVARCHAR(36), NEWID()),
-       CASE (p.i + k.k) % 4 WHEN 0 THEN 'Bebidas' WHEN 1 THEN 'Almacén' WHEN 2 THEN 'Limpieza' ELSE 'Lácteos' END,
-       CONCAT('Producto ', (p.i * 37 + k.k * 15013) % 50000),
-       (((p.i * 37 + k.k * 15013) % 500) * 100) + 99, 'COP', 1 + ((p.i + k.k) % 5)
+SELECT NEWID(), p.PedidoId, cat.Id, cat.Categoria, cat.Nombre, cat.Precio, 'COP', 1 + ((p.i + k.k) % 5)
 FROM #ped p
-CROSS JOIN (VALUES (0), (1), (2)) AS k(k);
+CROSS JOIN (VALUES (0), (1), (2)) AS k(k)
+JOIN #cat cat ON cat.rn = ((((p.i % 100) + 1) * 7 + (((p.i / 100) + k.k) % 5) * 3) % @n) + 1;
 
-DROP TABLE #cli, #ped;
+DROP TABLE #cli, #ped, #cat;
 
 PRINT 'Datos de prueba cargados.';
