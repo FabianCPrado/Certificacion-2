@@ -78,10 +78,20 @@ builder.Services
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
-builder.Services.AddAuthorization(options => options.AddPolicy("PedidosService", policy =>
-    policy.RequireAuthenticatedUser()
-        .RequireClaim("client_id", "pedidos-service")
-        .RequireClaim("client_type", "service")));
+builder.Services.AddAuthorization(options =>
+{
+    // Escritura (y lectura): solo el servicio de pedidos
+    options.AddPolicy("PedidosService", policy =>
+        policy.RequireAuthenticatedUser()
+            .RequireClaim("client_id", "pedidos-service")
+            .RequireClaim("client_type", "service"));
+
+    // Solo lectura: también el asistente (nunca puede modificar el catálogo)
+    options.AddPolicy("LecturaCatalogo", policy =>
+        policy.RequireAuthenticatedUser()
+            .RequireClaim("client_id", "pedidos-service", "asistente-service")
+            .RequireClaim("client_type", "service"));
+});
 
 var app = builder.Build();
 

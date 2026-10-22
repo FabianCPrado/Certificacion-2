@@ -11,6 +11,12 @@ public interface ICatalogoRepository
     /// <summary>Una página de productos de una categoría.</summary>
     Task<IReadOnlyList<ProductoCatalogo>> PorCategoriaAsync(string categoria, int saltar, int tomar, CancellationToken cancellationToken = default);
 
+    /// <summary>Categorías distintas que tienen al menos un producto, ordenadas por nombre.</summary>
+    Task<IReadOnlyList<string>> CategoriasAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Una página de productos de todas las categorías, ordenados por categoría, nombre e id.</summary>
+    Task<IReadOnlyList<ProductoCatalogo>> TodosAsync(int saltar, int tomar, CancellationToken cancellationToken = default);
+
     /// <summary>Productos de una categoría cuyo nombre contiene el texto buscado.</summary>
     Task<IReadOnlyList<ProductoCatalogo>> BuscarPorNombreAsync(string categoria, string nombre, CancellationToken cancellationToken = default);
 

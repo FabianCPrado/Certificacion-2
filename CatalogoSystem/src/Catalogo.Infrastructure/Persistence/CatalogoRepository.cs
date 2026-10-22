@@ -20,6 +20,20 @@ public sealed class CatalogoRepository(CatalogoDbContext db) : ICatalogoReposito
             .Skip(saltar).Take(tomar)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<string>> CategoriasAsync(CancellationToken cancellationToken = default) =>
+        await db.Productos.AsNoTracking()
+            .Select(p => p.Categoria)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ProductoCatalogo>> TodosAsync(int saltar, int tomar, CancellationToken cancellationToken = default) =>
+        await db.Productos.AsNoTracking()
+            .Include(p => p.Atributos)
+            .OrderBy(p => p.Categoria).ThenBy(p => p.Nombre).ThenBy(p => p.Id)
+            .Skip(saltar).Take(tomar)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<ProductoCatalogo>> BuscarPorNombreAsync(string categoria, string nombre, CancellationToken cancellationToken = default) =>
         await db.Productos.AsNoTracking()
             .Include(p => p.Atributos)

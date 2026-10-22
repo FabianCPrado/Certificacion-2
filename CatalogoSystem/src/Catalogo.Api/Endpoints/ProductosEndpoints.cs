@@ -7,7 +7,9 @@ using Catalogo.Application.Productos.Commands.CambiarPrecio;
 using Catalogo.Application.Productos.Commands.CrearProducto;
 using Catalogo.Application.Productos.Commands.EliminarProducto;
 using Catalogo.Application.Productos.Queries.BuscarProductos;
+using Catalogo.Application.Productos.Queries.ListarCategorias;
 using Catalogo.Application.Productos.Queries.ListarProductos;
+using Catalogo.Application.Productos.Queries.ListarTodosProductos;
 using Catalogo.Application.Productos.Queries.ObtenerProducto;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -24,14 +26,25 @@ public static class ProductosEndpoints
 
     public static IEndpointRouteBuilder MapProductos(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/productos")
-                   .WithTags("Productos")
-                   .AddEndpointFilter<TiempoFilter>()
-                   .RequireAuthorization("PedidosService");
+        var raiz = app.MapGroup("/api/productos")
+                      .WithTags("Productos")
+                      .AddEndpointFilter<TiempoFilter>();
+
+        // Lectura: la pueden pedir pedidos-service y asistente-service. Escritura: solo pedidos-service.
+        var g = raiz.MapGroup("").RequireAuthorization("LecturaCatalogo");
+        var escritura = raiz.MapGroup("").RequireAuthorization("PedidosService");
 
         g.MapGet("/", ListarAsync)
             .WithName("ListarProductos")
             .WithSummary("Lista los productos de una categoría, de a 20 por página");
+
+        g.MapGet("/categorias", ListarCategoriasAsync)
+            .WithName("ListarCategorias")
+            .WithSummary("Lista las categorías que tienen productos");
+
+        g.MapGet("/todos", ListarTodosAsync)
+            .WithName("ListarTodosLosProductos")
+            .WithSummary("Lista los productos de todas las categorías, paginado (hasta 100 por página)");
 
         g.MapGet("/buscar", BuscarAsync)
             .WithName("BuscarProductos")
@@ -42,33 +55,33 @@ public static class ProductosEndpoints
             .WithSummary("Obtiene un producto por categoría e id")
             .WithDescription("La categoría y el id identifican el producto.");
 
-        g.MapPut("/{categoria}/{id}/precio", CambiarPrecioAsync)
+        escritura.MapPut("/{categoria}/{id}/precio", CambiarPrecioAsync)
             .WithName("CambiarPrecio")
             .WithSummary("Cambia el precio de un producto")
             .WithDescription("El precio debe ser mayor que 0; si no, responde 400.");
 
-        g.MapPost("/", CrearAsync)
+        escritura.MapPost("/", CrearAsync)
             .WithName("CrearProducto")
             .WithSummary("Crea un producto");
 
-        g.MapPut("/{categoria}/{id}", ActualizarAsync)
+        escritura.MapPut("/{categoria}/{id}", ActualizarAsync)
             .WithName("ActualizarProducto")
             .WithSummary("Cambia nombre, precio y stock de un producto");
 
-        g.MapDelete("/{categoria}/{id}", EliminarAsync)
+        escritura.MapDelete("/{categoria}/{id}", EliminarAsync)
             .WithName("EliminarProducto")
             .WithSummary("Elimina un producto");
 
-        g.MapPost("/{categoria}/{id}/stock/descontar", DescontarStockAsync)
+        escritura.MapPost("/{categoria}/{id}/stock/descontar", DescontarStockAsync)
             .WithName("DescontarStock")
             .WithSummary("Descuenta stock de forma atómica")
             .WithDescription("404 si el producto no existe; 409 si no alcanza el stock.");
 
-        g.MapPost("/{categoria}/{id}/stock/reponer", ReponerStockAsync)
+        escritura.MapPost("/{categoria}/{id}/stock/reponer", ReponerStockAsync)
             .WithName("ReponerStock")
             .WithSummary("Repone stock (compensa un descuento)");
 
-        g.MapPost("/{categoria}/aumentar-precio", AumentarPrecioAsync)
+        escritura.MapPost("/{categoria}/aumentar-precio", AumentarPrecioAsync)
             .WithName("AumentarPrecioCategoria")
             .WithSummary("Sube el precio de toda una categoría un porcentaje");
 
@@ -115,6 +128,14 @@ public static class ProductosEndpoints
     private static async Task<Ok<IReadOnlyList<ProductoDto>>> ListarAsync(
         string categoria, ISender sender, CancellationToken ct, int pagina = 1)
         => TypedResults.Ok(await sender.Send(new ListarProductosQuery(categoria, pagina), ct));
+
+    private static async Task<Ok<IReadOnlyList<string>>> ListarCategoriasAsync(ISender sender, CancellationToken ct)
+        => TypedResults.Ok(await sender.Send(new ListarCategoriasQuery(), ct));
+
+    // binding: pagina y tamanio de la query, con valores por defecto
+    private static async Task<Ok<IReadOnlyList<ProductoDto>>> ListarTodosAsync(
+        ISender sender, CancellationToken ct, int pagina = 1, int tamanio = 100)
+        => TypedResults.Ok(await sender.Send(new ListarTodosProductosQuery(pagina, tamanio), ct));
 
     // binding: categoria y nombre de la query
     private static async Task<Ok<IReadOnlyList<ProductoDto>>> BuscarAsync(
