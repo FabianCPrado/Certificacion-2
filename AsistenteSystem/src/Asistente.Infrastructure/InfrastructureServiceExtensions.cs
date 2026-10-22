@@ -35,8 +35,6 @@ public static class InfrastructureServiceExtensions
         AgregarCliente(services, VerificadorSalud.Catalogo, configuration["Servicios:Catalogo"]).AddHttpMessageHandler<BearerTokenHandler>();
         AgregarCliente(services, VerificadorSalud.Pedidos, configuration["Servicios:Pedidos"]);
         AgregarCliente(services, VerificadorSalud.Clientes, configuration["Servicios:Clientes"]);
-        if (configuration["IA:Url"] is { Length: > 0 } urlOllama)
-            AgregarCliente(services, VerificadorSalud.Modelo, urlOllama);
 
         services.AddSingleton<ICatalogoConsultas, CatalogoConsultasHttp>();
         services.AddSingleton<IPedidosConsultas, PedidosConsultasHttp>();

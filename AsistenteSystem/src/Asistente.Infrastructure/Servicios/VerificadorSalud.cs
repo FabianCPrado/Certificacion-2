@@ -19,7 +19,6 @@ public sealed class VerificadorSalud(
     public const string Catalogo = "Catalogo";
     public const string Pedidos = "Pedidos";
     public const string Clientes = "Clientes";
-    public const string Modelo = "Modelo";
 
     private static readonly TimeSpan Limite = TimeSpan.FromSeconds(5);
 
@@ -99,16 +98,7 @@ public sealed class VerificadorSalud(
             }, cancellationToken);
         }
 
-        if (!string.Equals(configuration["IA:Proveedor"], "Ollama", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new ComponenteSalud("Modelo", "IA", "SinConfigurar", "El proveedor de IA todavía no está conectado", 0));
-
-        return Medir("Modelo", $"Ollama ({configuration["IA:ModeloChat"]})", async () =>
-        {
-            var http = httpClientFactory.CreateClient(Modelo);
-            using var respuesta = await http.GetAsync("/api/tags", cancellationToken);
-            respuesta.EnsureSuccessStatusCode();
-            return "Ollama responde";
-        }, cancellationToken);
+        return Task.FromResult(new ComponenteSalud("Modelo", "IA", "SinConfigurar", "Falta IA:Proveedor = Anthropic", 0));
     }
 
     private static async Task<ComponenteSalud> Medir(
