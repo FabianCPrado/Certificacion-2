@@ -71,6 +71,34 @@ public class SistemasIATests
     }
 
     [Fact]
+    public void Las_instrucciones_no_nombran_las_herramientas_para_que_el_modelo_no_las_repita_en_sus_respuestas()
+    {
+        var nombres = new[]
+        {
+            HerramientasSistemas.ListarSistemas, HerramientasSistemas.ObtenerSistema, HerramientasSistemas.ImpactoDeSistema,
+            HerramientasSistemas.BuscarEnConocimiento, HerramientasSistemas.ListarDocumentos, HerramientasSistemas.LeerDocumento,
+            Herramientas.ObtenerPrecioYStock, Herramientas.BuscarProductos, Herramientas.UltimosPedidosDeCliente,
+            Herramientas.EstadoDePedido, Herramientas.DatosDeCliente
+        };
+
+        foreach (var nombre in nombres)
+        {
+            Assert.False(Instrucciones.Ecosistema.Contains(nombre, StringComparison.Ordinal), $"Ecosistema nombra {nombre}");
+            Assert.False(Instrucciones.Sistema.Contains(nombre, StringComparison.Ordinal), $"Sistema nombra {nombre}");
+        }
+    }
+
+    [Theory]
+    [InlineData(nameof(Instrucciones.Ecosistema))]
+    [InlineData(nameof(Instrucciones.Sistema))]
+    public void Las_instrucciones_prohiben_contar_como_se_obtuvieron_los_datos(string cual)
+    {
+        var texto = cual == nameof(Instrucciones.Ecosistema) ? Instrucciones.Ecosistema : Instrucciones.Sistema;
+
+        Assert.Contains("Nunca nombres las herramientas", texto);
+    }
+
+    [Fact]
     public async Task El_modelo_recibe_las_instrucciones_del_ecosistema_y_no_las_de_negocio()
     {
         var modelo = new ModeloFalso(Texto("ok"));
