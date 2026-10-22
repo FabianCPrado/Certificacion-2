@@ -1,6 +1,8 @@
+using System.Text.Json.Nodes;
 using Asistente.Api.Endpoints;
 using Asistente.Api.Infrastructure;
 using Asistente.Application;
+using Asistente.Application.Asistente;
 using Asistente.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +13,24 @@ builder.Services
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddOpenApi();
+// Ejemplo del cuerpo de /preguntar en Swagger: un cliente con pedidos (Swagger:ClienteEjemplo), para probar sin buscar ids
+var clienteEjemplo = builder.Configuration["Swagger:ClienteEjemplo"];
+builder.Services.AddOpenApi(opciones => opciones.AddSchemaTransformer((esquema, contexto, _) =>
+{
+    if (contexto.JsonTypeInfo.Type == typeof(PreguntaRequest))
+    {
+        esquema.Examples =
+        [
+            new JsonObject
+            {
+                ["pregunta"] = "¿Qué productos compré en mis últimos pedidos?",
+                ["clienteId"] = string.IsNullOrWhiteSpace(clienteEjemplo) ? null : clienteEjemplo
+            }
+        ];
+    }
+
+    return Task.CompletedTask;
+}));
 
 var app = builder.Build();
 

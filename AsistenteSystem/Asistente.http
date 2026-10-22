@@ -7,8 +7,8 @@
 
 @baseUrl = https://localhost:7501
 
-# Cliente de la base local con pedidos. Para ver otros: ejecutar "Clientes de prueba" y copiar un id.
-@clienteId = 39ad89c4-db79-416d-ab51-8fff21484485
+# Cliente 75: 10 pedidos (9 confirmados, 1 cancelado) y 5 productos favoritos en 4 categorias. Para otros: peticion "Clientes de prueba".
+@clienteId = a70f12d1-dc67-43a2-ab41-16d2858e0d52
 
 ### 1. Salud: comprueba Authentication, Catalogo, Pedidos, Clientes y el modelo (200 si todo responde, 503 si no)
 GET {{baseUrl}}/api/asistente/salud
