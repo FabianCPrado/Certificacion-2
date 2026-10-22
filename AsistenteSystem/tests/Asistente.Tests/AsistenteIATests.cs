@@ -118,9 +118,4 @@ public class AsistenteIATests
         await Assert.ThrowsAsync<ServicioNoDisponibleException>(
             () => Crear(modelo).ResponderAsync(new PreguntaRequest("¿Hay stock?", null)));
     }
-
-    [Fact]
-    public async Task Proponer_pedido_todavia_no_esta_disponible() =>
-        await Assert.ThrowsAsync<ServicioNoDisponibleException>(
-            () => Crear(new ModeloFalso()).ProponerPedidoAsync(new PropuestaRequest(Guid.NewGuid(), "lo de siempre")));
 }

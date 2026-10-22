@@ -9,7 +9,7 @@ namespace Asistente.Infrastructure.IA;
 
 /// <summary>
 /// Responde preguntas con un modelo de lenguaje que llama a las herramientas del mapa. La IA es un detalle de
-/// Infrastructure: Application solo conoce <see cref="IAsistente"/>. Proponer pedidos llega con el agente (tarea 5).
+/// Infrastructure: Application solo conoce <see cref="IAsistente"/>.
 /// </summary>
 public sealed class AsistenteIA(IChatClient chat, Herramientas herramientas) : IAsistente
 {
@@ -52,7 +52,4 @@ public sealed class AsistenteIA(IChatClient chat, Herramientas herramientas) : I
             throw new ServicioNoDisponibleException("El modelo de IA no está disponible.", ex);
         }
     }
-
-    public Task<PropuestaPedidoDto> ProponerPedidoAsync(PropuestaRequest solicitud, CancellationToken cancellationToken = default) =>
-        throw new ServicioNoDisponibleException("Proponer pedidos todavía no está disponible (tarea 5).");
 }

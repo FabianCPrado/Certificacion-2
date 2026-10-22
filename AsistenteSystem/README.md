@@ -5,7 +5,7 @@ Servicio de IA de **Certificacion-2**. Recibe preguntas en lenguaje natural y la
 ## Reglas
 
 1. Sin base de negocio propia: todo dato sale de las APIs de los otros servicios.
-2. Solo lectura: lo que implique un cambio se devuelve como **propuesta**; lo confirma una persona en Pedidos.
+2. Solo lectura: ninguna herramienta modifica datos; los cambios los hace una persona en Pedidos.
 3. No duplica reglas de negocio.
 4. Identidad propia: cliente de servicio `asistente-service` en Authentication.
 5. La IA es un detalle de `Infrastructure`; `Application` y `Domain` no la conocen.
@@ -30,7 +30,6 @@ tests/
 |---|---|
 | `GET /api/asistente/herramientas` | Funciona: lista el mapa (5 herramientas) |
 | `POST /api/asistente/preguntar` | Valida (400); responde 503 hasta conectar el modelo (tarea 3) |
-| `POST /api/asistente/proponer-pedido` | Valida (400); responde 503 hasta implementar el agente (tarea 5) |
 
 ## Correrlo
 

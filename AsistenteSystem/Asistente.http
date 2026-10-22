@@ -91,14 +91,5 @@ Content-Type: application/json
   "pregunta": ""
 }
 
-### 12. Proponer pedido: todavia no esta disponible (503, tarea 5)
-POST {{baseUrl}}/api/asistente/proponer-pedido
-Content-Type: application/json
-
-{
-  "clienteId": "{{clienteId}}",
-  "pedido": "lo de siempre"
-}
-
-### Clientes de prueba (servicio Clientes): copiar un id para usar arriba
+### 12. Clientes de prueba (servicio Clientes): copiar un id para usar arriba
 GET https://localhost:7201/api/clientes?tamanio=5

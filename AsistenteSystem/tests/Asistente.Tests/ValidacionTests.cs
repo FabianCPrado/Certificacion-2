@@ -24,15 +24,6 @@ public class ValidacionTests
         Assert.True(new PreguntarQueryValidator().Validate(new PreguntarQuery("hay stock de yerba?", Guid.NewGuid())).IsValid);
 
     [Fact]
-    public void Pedido_de_propuesta_fuera_de_rango_no_es_valido()
-    {
-        var validador = new ProponerPedidoQueryValidator();
-        Assert.False(validador.Validate(new ProponerPedidoQuery(Guid.NewGuid(), "x")).IsValid);
-        Assert.False(validador.Validate(new ProponerPedidoQuery(Guid.NewGuid(), new string('a', 201))).IsValid);
-        Assert.True(validador.Validate(new ProponerPedidoQuery(Guid.NewGuid(), "lo de siempre")).IsValid);
-    }
-
-    [Fact]
     public void El_mapa_del_api_define_cinco_herramientas_de_solo_lectura()
     {
         var ruta = Path.Combine(AppContext.BaseDirectory, "mapa-sistema.json");
