@@ -20,19 +20,36 @@ public static class AuthenticationDbInitializer
         await db.Database.MigrateAsync(cancellationToken);
 
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("AuthenticationDbInitializer");
-        var secret = configuration["ClientCredentials:PedidosSecret"];
+        var hasher = provider.GetRequiredService<IClientSecretHasher>();
+
+        await ProvisionClientAsync(db, hasher, logger, configuration,
+            "pedidos-service", "Pedidos service", "ClientCredentials:PedidosSecret", cancellationToken);
+        await ProvisionClientAsync(db, hasher, logger, configuration,
+            "asistente-service", "Asistente service", "ClientCredentials:AsistenteSecret", cancellationToken);
+    }
+
+    private static async Task ProvisionClientAsync(
+        AuthenticationDbContext db,
+        IClientSecretHasher hasher,
+        ILogger logger,
+        IConfiguration configuration,
+        string clientId,
+        string name,
+        string secretKey,
+        CancellationToken cancellationToken)
+    {
+        var secret = configuration[secretKey];
         if (string.IsNullOrWhiteSpace(secret))
         {
-            logger.LogWarning("No se provisionó el cliente Pedidos: configure ClientCredentials:PedidosSecret mediante User Secrets.");
+            logger.LogWarning("No se provisionó el cliente {ClientId}: configure {SecretKey} mediante User Secrets.", clientId, secretKey);
             return;
         }
 
-        const string clientId = "pedidos-service";
         if (await db.ServiceClients.AnyAsync(c => c.ClientId == clientId, cancellationToken))
             return;
 
-        var client = new ServiceClient(clientId, "Pedidos service", "pending");
-        client.ReplaceSecretHash(provider.GetRequiredService<IClientSecretHasher>().Hash(client, secret));
+        var client = new ServiceClient(clientId, name, "pending");
+        client.ReplaceSecretHash(hasher.Hash(client, secret));
         db.ServiceClients.Add(client);
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Se aprovisionó el cliente de servicio {ClientId}.", clientId);

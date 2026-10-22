@@ -23,7 +23,17 @@ dotnet user-secrets set "Jwt:SigningKey" $signingKey --project src/Authenticatio
 dotnet user-secrets set "ClientCredentials:PedidosSecret" $pedidosSecret --project src/Authentication.Api
 dotnet user-secrets set "Jwt:SigningKey" $signingKey --project ../CatalogoSystem/src/Catalogo.Api
 dotnet user-secrets set "ClientCredentials:PedidosSecret" $pedidosSecret --project ../PedidosSystem/src/Pedidos.Api
+
+# Cliente del asistente (AsistenteSystem): la API crea "asistente-service" al arrancar con este secreto
+$bytes = New-Object byte[] 48
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$asistenteSecret = [Convert]::ToBase64String($bytes)
+
+dotnet user-secrets set "ClientCredentials:AsistenteSecret" $asistenteSecret --project src/Authentication.Api
+dotnet user-secrets set "Authentication:ClientSecret" $asistenteSecret --project ../AsistenteSystem/src/Asistente.Api
 ```
+
+La base `AuthenticationDB` se crea con [`sql/06-AuthenticationDb-crear.sql`](../sql/06-AuthenticationDb-crear.sql) (o sola, con las migraciones). Los clientes de servicio no van en el script: su secreto se guarda hasheado y los crea la API al arrancar en Development.
 
 ## Ejecución local
 
