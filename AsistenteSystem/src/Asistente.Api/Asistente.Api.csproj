@@ -16,6 +16,10 @@
 
   <ItemGroup>
     <Content Update="mapa-sistema.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="sistemas.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- La base de conocimiento vive en docs/ (se lee en el repo) y se copia junto a la API para servirla -->
+    <Content Include="..\..\docs\arquitectura\*.md" Link="conocimiento\arquitectura\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\docs\instrucciones\*.md" Link="conocimiento\instrucciones\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

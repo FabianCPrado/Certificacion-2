@@ -93,3 +93,32 @@ Content-Type: application/json
 
 ### 12. Clientes de prueba (servicio Clientes): copiar un id para usar arriba
 GET https://localhost:7201/api/clientes?tamanio=5
+
+###
+# ---------------------------------------------------------------------------------------------------------------
+# Apartado Sistemas: la estructura de cada sistema y la base de conocimiento. No necesita los otros servicios.
+# ---------------------------------------------------------------------------------------------------------------
+
+### 13. Lista de sistemas (puertos, base de datos, de quién dependen)
+GET {{baseUrl}}/api/sistemas
+
+### 14. Estructura completa de un sistema (capas, endpoints, contratos, tests, notas)
+GET {{baseUrl}}/api/sistemas/pedidos
+
+### 15. Impacto: qué sistemas consumen a Catalogo (qué se rompe si lo cambio)
+GET {{baseUrl}}/api/sistemas/catalogo/impacto
+
+### 16. Buscar dónde está algo antes de cambiarlo (sin importar tildes)
+GET {{baseUrl}}/api/sistemas/buscar?texto=stock
+
+### 17. Documentos de arquitectura
+GET {{baseUrl}}/api/sistemas/arquitectura
+
+### 18. Un documento de arquitectura completo
+GET {{baseUrl}}/api/sistemas/arquitectura/capas-y-dependencias
+
+### 19. Guías paso a paso
+GET {{baseUrl}}/api/sistemas/instrucciones
+
+### 20. Una guía completa: cambiar un contrato entre sistemas
+GET {{baseUrl}}/api/sistemas/instrucciones/cambiar-un-contrato

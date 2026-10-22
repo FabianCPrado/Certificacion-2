@@ -9,7 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure(builder.Configuration, Path.Combine(AppContext.BaseDirectory, "mapa-sistema.json"));
+    .AddInfrastructure(
+        builder.Configuration,
+        Path.Combine(AppContext.BaseDirectory, "mapa-sistema.json"),
+        Path.Combine(AppContext.BaseDirectory, "sistemas.json"),
+        Path.Combine(AppContext.BaseDirectory, "conocimiento"));
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -45,6 +49,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapAsistente();
+app.MapSistemas();
 
 await app.RunAsync();
 

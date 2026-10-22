@@ -15,12 +15,16 @@ public static class InfrastructureServiceExtensions
     private static readonly TimeSpan TiempoMaximo = TimeSpan.FromSeconds(10);
 
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, IConfiguration configuration, string rutaMapa)
+        this IServiceCollection services, IConfiguration configuration, string rutaMapa, string rutaSistemas, string carpetaConocimiento)
     {
         // Falla al iniciar si el mapa y las herramientas del código no coinciden
         var mapa = new MapaSistema(rutaMapa);
         Herramientas.Validar(mapa.Herramientas);
         services.AddSingleton<IMapaSistema>(mapa);
+
+        // Base de conocimiento: estructura de los sistemas y documentos de arquitectura e instrucciones
+        services.AddSingleton<IEstructuraSistemas>(new EstructuraSistemas(rutaSistemas));
+        services.AddSingleton<IBibliotecaDocumentos>(new BibliotecaDocumentos(carpetaConocimiento));
 
         // Nada se conecta al arrancar: los HttpClient y el token se usan recién cuando alguien los necesita
         services.AddSingleton(TimeProvider.System);

@@ -1,0 +1,214 @@
+{
+  "sistemas": [
+    {
+      "nombre": "Authentication",
+      "carpeta": "AuthenticationSystem",
+      "descripcion": "Emite JWT para clientes de servicio (autenticación entre sistemas). No tiene usuarios finales.",
+      "puertoHttps": 7401,
+      "puertoHttp": 5401,
+      "baseDeDatos": "AuthenticationDB (SQL Server): tabla ServiceClients, migraciones de EF Core. Script: sql/06-AuthenticationDb-crear.sql",
+      "tecnologias": [".NET 10", "Minimal APIs", "EF Core SQL Server", "JWT (HMAC)", "ASP.NET Identity PasswordHasher", "Swagger UI"],
+      "capas": [
+        { "proyecto": "Authentication.Api", "responsabilidad": "Endpoints/TokenEndpoints (POST /api/tokens) y arranque (Program.cs)" },
+        { "proyecto": "Authentication.Application", "responsabilidad": "Clients: casos de uso e interfaces (IIssueClientToken, IClientSecretHasher, IServiceClientRepository)" },
+        { "proyecto": "Authentication.Domain", "responsabilidad": "ServiceClient (ClientId, Name, SecretHash, IsActive, CreatedAt)" },
+        { "proyecto": "Authentication.Infrastructure", "responsabilidad": "Persistence (AuthenticationDbContext, ServiceClientRepository, AuthenticationDbInitializer, Migrations) y Security (ClientSecretHasher)" }
+      ],
+      "endpoints": [
+        { "metodo": "POST", "ruta": "/api/tokens", "descripcion": "Emite un JWT para un cliente de servicio (body: clientId, clientSecret). 200 con el token, 400 si el cuerpo es inválido, 401 si las credenciales no coinciden.", "acceso": "Público" }
+      ],
+      "consume": [],
+      "contratos": [
+        { "nombre": "POST /api/tokens", "descripcion": "Respuesta { accessToken, tokenType, expiresAt }", "usadoPor": ["Pedidos", "Asistente"] },
+        { "nombre": "Claims del JWT", "descripcion": "client_id, client_type = service, emisor AuthenticationSystem, audiencia catalogo-api; se firma con Jwt:SigningKey", "usadoPor": ["Catalogo"] }
+      ],
+      "tests": ["Sin proyecto de tests"],
+      "notas": [
+        "Los clientes de servicio (pedidos-service, asistente-service) se crean al arrancar en Development, desde User Secrets: ClientCredentials:PedidosSecret y ClientCredentials:AsistenteSecret.",
+        "Jwt:SigningKey debe ser el mismo valor en Authentication y en Catalogo, o Catalogo rechaza todos los tokens.",
+        "El secreto de cada cliente se guarda hasheado (PBKDF2): el hash no se puede generar en SQL."
+      ]
+    },
+    {
+      "nombre": "Catalogo",
+      "carpeta": "CatalogoSystem",
+      "descripcion": "Catálogo de productos: precio, stock y atributos. Un producto se identifica por categoría + id.",
+      "puertoHttps": 7301,
+      "puertoHttp": 5301,
+      "baseDeDatos": "CatalogoDb (SQL Server): tablas Productos y ProductoAtributos, EnsureCreated en Development. Script: sql/03-CatalogoDb-crear.sql",
+      "tecnologias": [".NET 10", "Minimal APIs", "gRPC", "MediatR 12.5.0", "FluentValidation", "EF Core SQL Server", "JWT Bearer", "Swagger UI"],
+      "capas": [
+        { "proyecto": "Catalogo.Api", "responsabilidad": "Endpoints/ProductosEndpoints (REST), Grpc/CatalogoGrpcService, Filtros/TiempoFilter, autorización JWT y arranque" },
+        { "proyecto": "Catalogo.Application", "responsabilidad": "Productos: Commands (crear, actualizar, cambiar precio, ajustar stock, eliminar, aumentar precio por categoría) y Queries (obtener, listar, buscar, categorías, todos); ICatalogoRepository" },
+        { "proyecto": "Catalogo.Domain", "responsabilidad": "ProductoCatalogo y ProductoAtributo" },
+        { "proyecto": "Catalogo.Infrastructure", "responsabilidad": "Persistence: CatalogoDbContext, CatalogoRepository (EF Core) y DbInicializador" }
+      ],
+      "endpoints": [
+        { "metodo": "GET", "ruta": "/api/productos", "descripcion": "Lista los productos de una categoría (query categoria, pagina), de a 20.", "acceso": "JWT: pedidos-service o asistente-service (LecturaCatalogo)" },
+        { "metodo": "GET", "ruta": "/api/productos/categorias", "descripcion": "Lista las categorías que tienen productos.", "acceso": "JWT: LecturaCatalogo" },
+        { "metodo": "GET", "ruta": "/api/productos/todos", "descripcion": "Lista los productos de todas las categorías (query pagina, tamanio hasta 100), ordenados por categoría y nombre.", "acceso": "JWT: LecturaCatalogo" },
+        { "metodo": "GET", "ruta": "/api/productos/buscar", "descripcion": "Busca por nombre dentro de una categoría (query categoria, nombre). Distingue tildes.", "acceso": "JWT: LecturaCatalogo" },
+        { "metodo": "GET", "ruta": "/api/productos/{categoria}/{id}", "descripcion": "Obtiene un producto por categoría e id. 404 si no existe.", "acceso": "JWT: LecturaCatalogo" },
+        { "metodo": "POST", "ruta": "/api/productos", "descripcion": "Crea un producto.", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "PUT", "ruta": "/api/productos/{categoria}/{id}", "descripcion": "Cambia nombre, precio y stock.", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "PUT", "ruta": "/api/productos/{categoria}/{id}/precio", "descripcion": "Cambia el precio (debe ser mayor que 0).", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "DELETE", "ruta": "/api/productos/{categoria}/{id}", "descripcion": "Elimina un producto.", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "POST", "ruta": "/api/productos/{categoria}/{id}/stock/descontar", "descripcion": "Descuenta stock de forma atómica. 404 si no existe, 409 si no alcanza.", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "POST", "ruta": "/api/productos/{categoria}/{id}/stock/reponer", "descripcion": "Repone stock (compensa un descuento).", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "POST", "ruta": "/api/productos/{categoria}/aumentar-precio", "descripcion": "Sube el precio de toda una categoría un porcentaje.", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "gRPC", "ruta": "CatalogoService.ObtenerPrecioYStock", "descripcion": "Precio y stock de un producto (mismo caso de uso que el REST).", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "gRPC", "ruta": "CatalogoService.SeguirStock", "descripcion": "Streaming del stock de un producto (opcional).", "acceso": "JWT: solo pedidos-service" },
+        { "metodo": "GET", "ruta": "/demo/clase6/producto-malo/{categoria}/{id}", "descripcion": "Demo de la clase 6, solo en Development.", "acceso": "Solo Development" }
+      ],
+      "consume": [
+        { "sistema": "Authentication", "para": "Validar los JWT que le llegan", "como": "No lo llama: valida la firma con la misma clave (Jwt:SigningKey), emisor y audiencia" }
+      ],
+      "contratos": [
+        { "nombre": "ProductoDto", "descripcion": "{ id, categoria, nombre, precio, stock, atributos[{ parametro, valor }] }", "usadoPor": ["Pedidos", "Asistente"] },
+        { "nombre": "REST de stock", "descripcion": "POST /api/productos/{categoria}/{id}/stock/(descontar|reponer) con { cantidad }", "usadoPor": ["Pedidos"] },
+        { "nombre": "catalogo.proto", "descripcion": "Servicio gRPC CatalogoService (ObtenerPrecioYStock, SeguirStock)", "usadoPor": ["Pedidos"] },
+        { "nombre": "Policies de autorización", "descripcion": "LecturaCatalogo (pedidos-service y asistente-service) y PedidosService (solo pedidos-service)", "usadoPor": ["Pedidos", "Asistente"] }
+      ],
+      "tests": ["Sin proyecto de tests"],
+      "notas": [
+        "Las escrituras exigen pedidos-service: el asistente recibe 403 si intenta escribir.",
+        "La búsqueda por nombre usa LIKE y distingue tildes; el Asistente busca por /todos y filtra sin tildes.",
+        "Una línea de pedido guarda productoId y categoría: las dos hacen falta para encontrar el producto."
+      ]
+    },
+    {
+      "nombre": "Pedidos",
+      "carpeta": "PedidosSystem",
+      "descripcion": "Pedidos y sus líneas, con auditoría, caché, imágenes y demos de bases de datos (Redis, Mongo, Cosmos, Blob). Es el sistema más grande.",
+      "puertoHttps": 7101,
+      "puertoHttp": 5101,
+      "baseDeDatos": "PedidosDb (SQL Server): Pedidos, LineasPedido, Auditoria y procedimientos almacenados; además Redis, MongoDB, Cosmos DB y Azure Blob (Azurite) por Docker. Scripts: sql/01, 02 y 04",
+      "tecnologias": [".NET 10", "Controladores MVC", "MediatR 12.5.0", "FluentValidation", "EF Core SQL Server", "Dapper", "gRPC (cliente)", "Redis", "MongoDB", "Cosmos DB", "Azure Blob", "Swagger UI"],
+      "capas": [
+        { "proyecto": "Pedidos.Api", "responsabilidad": "Controllers (Pedidos, Clientes, Productos, Auditoria, Blob, Cache, Cosmos), Endpoints de las demos de clase 4, 5 y 6, GlobalExceptionHandler" },
+        { "proyecto": "Pedidos.Application", "responsabilidad": "Pedidos (Commands y Queries), Clientes, Productos, Valoraciones, Auditoria, Behaviors (logging y validación), Interfaces, Common (PagedResult, Mensajes, ClavesCache)" },
+        { "proyecto": "Pedidos.Domain", "responsabilidad": "Pedido, LineaPedido, EstadoPedido (Borrador, Confirmado, Cancelado), ValueObjects (Dinero, Email, Direccion), Auditoria y Catalogo" },
+        { "proyecto": "Pedidos.Infrastructure", "responsabilidad": "Persistence (AppDbContext, repositorios, mapeos), Queries (EF Core y Dapper), Rest (Catalogo y Clientes), Grpc (Catalogo), Caching (Redis), Mongo, Cosmos, Storage (Blob)" }
+      ],
+      "endpoints": [
+        { "metodo": "POST", "ruta": "/api/pedidos", "descripcion": "Crea un pedido en borrador. 201, 400 o 409.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/pedidos/{id}", "descripcion": "Pedido con sus líneas (incluye EmailCliente). 404 si no existe.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/pedidos/{id}/cliente", "descripcion": "Datos del cliente del pedido, consultados al servicio Clientes. 503 si Clientes no responde.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/pedidos", "descripcion": "Resumen paginado de pedidos (sin líneas), con filtro opcional clienteId; pagina y tamanio hasta 100. Del más nuevo al más viejo.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/pedidos/detalle", "descripcion": "Pedidos con sus líneas (incluye categoría) y sin email, paginado, con filtro opcional clienteId.", "acceso": "Sin token" },
+        { "metodo": "PUT", "ruta": "/api/pedidos/{id}", "descripcion": "Cambia el email y la dirección de envío de un pedido en borrador.", "acceso": "Sin token" },
+        { "metodo": "DELETE", "ruta": "/api/pedidos/{id}", "descripcion": "Elimina un pedido.", "acceso": "Sin token" },
+        { "metodo": "POST", "ruta": "/api/pedidos/{id}/confirmar", "descripcion": "Confirma un pedido (pasa de Borrador a Confirmado).", "acceso": "Sin token" },
+        { "metodo": "POST", "ruta": "/api/pedidos/{id}/cancelar", "descripcion": "Cancela un pedido.", "acceso": "Sin token" },
+        { "metodo": "POST", "ruta": "/api/pedidos/cancelar-borradores-antiguos", "descripcion": "Cancela los borradores antiguos (procedimiento almacenado).", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/clientes", "descripcion": "Lista clientes (solo lectura): los datos vienen del servicio Clientes.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/clientes/{id}", "descripcion": "Un cliente (solo lectura), consultado a Clientes.", "acceso": "Sin token" },
+        { "metodo": "VARIOS", "ruta": "/api/productos", "descripcion": "Alta, listado, consulta, cambio y baja de productos: pasarela hacia el servicio Catálogo.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/auditoria", "descripcion": "Registro de las operaciones que modifican datos.", "acceso": "Sin token" },
+        { "metodo": "VARIOS", "ruta": "/api/blob/imagenes/{categoria}/{productoId}", "descripcion": "Sube (POST) y baja (GET) la imagen de un producto en Azure Blob (Azurite).", "acceso": "Sin token" },
+        { "metodo": "VARIOS", "ruta": "/api/cache/...", "descripcion": "Consulta y borra la caché Redis de pedidos (/pedidos) y de productos (/productos/{categoria}/{id}).", "acceso": "Sin token" },
+        { "metodo": "VARIOS", "ruta": "/api/cosmos/...", "descripcion": "Demos de Cosmos DB: catálogo, EF, repositorio y valoraciones.", "acceso": "Sin token" },
+        { "metodo": "VARIOS", "ruta": "/demo/clase4, /demo/clase5, /demo/clase6", "descripcion": "Demos de las clases (EF Core vs Dapper, caché, REST contra gRPC), solo en Development.", "acceso": "Solo Development" }
+      ],
+      "consume": [
+        { "sistema": "Authentication", "para": "Obtener su JWT (cliente pedidos-service)", "como": "POST /api/tokens" },
+        { "sistema": "Catalogo", "para": "Leer productos y descontar o reponer stock", "como": "REST /api/productos con Bearer; gRPC CatalogoService (demo clase 6)" },
+        { "sistema": "Clientes", "para": "Obtener los datos de un cliente", "como": "REST GET /api/clientes" }
+      ],
+      "contratos": [
+        { "nombre": "PedidoDto y LineaPedidoDto", "descripcion": "PedidoDto { id, clienteId, emailCliente, estado, total, moneda, creadoEn, lineas }; LineaPedidoDto { productoId, categoria, nombreProducto, precioUnitario, cantidad, subtotal }", "usadoPor": ["Asistente"] },
+        { "nombre": "GET /api/pedidos/detalle", "descripcion": "PagedResult<PedidoDetalleDto> con líneas y sin email", "usadoPor": ["Asistente"] },
+        { "nombre": "GET /api/pedidos?clienteId=&pagina=&tamanio=", "descripcion": "PagedResult<PedidoResumenDto>; Clientes lee el total para saber si un cliente tiene pedidos", "usadoPor": ["Clientes"] },
+        { "nombre": "GET /api/cache/pedidos", "descripcion": "Pedidos cacheados en Redis por rango de fechas", "usadoPor": ["Clientes"] }
+      ],
+      "tests": ["Pedidos.Domain.Tests", "Pedidos.Application.Tests (incluye CqrsArquitecturaTests)", "Pedidos.Infrastructure.Tests"],
+      "notas": [
+        "No valida JWT entrante: cualquiera puede llamarlo.",
+        "Guarda ClienteId sin clave foránea; el cliente vive en Clientes.",
+        "LineasPedido guarda ProductoId (texto) y Categoria: sin la categoría no se puede consultar el producto en Catalogo.",
+        "Si agregás un método a IPedidosConsultas, hay que actualizar FakePedidosConsultas en los tests.",
+        "Redis, Mongo, Cosmos y Blob requieren docker compose up -d en PedidosSystem; sin Docker, Pedidos arranca igual pero avisa."
+      ]
+    },
+    {
+      "nombre": "Clientes",
+      "carpeta": "ClientesSystem",
+      "descripcion": "Alta, consulta, cambio y baja de clientes. Es el dueño de los datos de los clientes.",
+      "puertoHttps": 7201,
+      "puertoHttp": 5201,
+      "baseDeDatos": "ClientesDb (SQL Server): tabla Clientes con índice único por email. Script: sql/05-ClientesDb-crear.sql",
+      "tecnologias": [".NET 10", "Controladores MVC", "MediatR 12.5.0", "FluentValidation", "EF Core SQL Server", "Swagger UI"],
+      "capas": [
+        { "proyecto": "Clientes.Api", "responsabilidad": "Controllers (Clientes y demo de Redis) y GlobalExceptionHandler" },
+        { "proyecto": "Clientes.Application", "responsabilidad": "Clientes: Commands (crear, actualizar, eliminar) y Queries (listar, obtener, pedidos en Redis); Behaviors; Interfaces; Common (PagedResult, Mensajes)" },
+        { "proyecto": "Clientes.Domain", "responsabilidad": "Cliente y el value object Email" },
+        { "proyecto": "Clientes.Infrastructure", "responsabilidad": "Persistence (AppDbContext, ClienteRepository), Queries y Rest (consultas a Pedidos)" }
+      ],
+      "endpoints": [
+        { "metodo": "POST", "ruta": "/api/clientes", "descripcion": "Crea un cliente. 201, 400 o 409 si el email ya existe.", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/clientes", "descripcion": "Lista paginada de clientes (pagina, tamanio hasta 100).", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/clientes/{id}", "descripcion": "Un cliente { id, nombre, email }. 404 si no existe.", "acceso": "Sin token" },
+        { "metodo": "PUT", "ruta": "/api/clientes/{id}", "descripcion": "Cambia nombre y email.", "acceso": "Sin token" },
+        { "metodo": "DELETE", "ruta": "/api/clientes/{id}", "descripcion": "Elimina un cliente. 409 si tiene pedidos; 503 si Pedidos no responde (falla cerrado).", "acceso": "Sin token" },
+        { "metodo": "GET", "ruta": "/api/redis/pedidos", "descripcion": "Demo: pedidos por rango de fechas, tomados de la caché de Pedidos.", "acceso": "Sin token" }
+      ],
+      "consume": [
+        { "sistema": "Pedidos", "para": "Saber si un cliente tiene pedidos antes de eliminarlo; leer la caché de pedidos", "como": "REST GET /api/pedidos?clienteId=&pagina=1&tamanio=1 y GET /api/cache/pedidos" }
+      ],
+      "contratos": [
+        { "nombre": "ClienteDto", "descripcion": "{ id, nombre, email }. El email es un dato sensible.", "usadoPor": ["Pedidos", "Asistente"] }
+      ],
+      "tests": ["Clientes.Domain.Tests", "Clientes.Application.Tests (incluye CqrsArquitecturaTests)", "Clientes.Infrastructure.Tests"],
+      "notas": [
+        "No valida JWT entrante.",
+        "El email es único: un duplicado devuelve 409.",
+        "Eliminar depende de Pedidos: si Pedidos está caído no se borra nada."
+      ]
+    },
+    {
+      "nombre": "Asistente",
+      "carpeta": "AsistenteSystem",
+      "descripcion": "Asistente de IA: responde preguntas en lenguaje natural consultando a los otros sistemas por sus APIs, con un modelo Claude. Solo lectura, sin base de negocio propia.",
+      "puertoHttps": 7501,
+      "puertoHttp": 5501,
+      "baseDeDatos": null,
+      "tecnologias": [".NET 10", "Minimal APIs", "MediatR 12.5.0", "FluentValidation", "Microsoft.Extensions.AI", "SDK de Anthropic (Claude)", "Swagger UI"],
+      "capas": [
+        { "proyecto": "Asistente.Api", "responsabilidad": "Endpoints (Asistente y Sistemas), mapa-sistema.json, sistemas.json, GlobalExceptionHandler y arranque" },
+        { "proyecto": "Asistente.Application", "responsabilidad": "Casos de uso (preguntar, herramientas, salud, sistemas), puertos (IAsistente, ICatalogoConsultas, IPedidosConsultas, IClientesConsultas, IVerificadorSalud) y behaviors" },
+        { "proyecto": "Asistente.Domain", "responsabilidad": "Tipos simples: Fuente, HerramientaInfo y la estructura de sistemas" },
+        { "proyecto": "Asistente.Infrastructure", "responsabilidad": "IA (AsistenteIA, Herramientas, Instrucciones), Servicios (consultas HTTP, TokenProvider, BearerTokenHandler, VerificadorSalud) y Mapa (lectura de los archivos de conocimiento)" }
+      ],
+      "endpoints": [
+        { "metodo": "POST", "ruta": "/api/asistente/preguntar", "descripcion": "Responde una pregunta (body: pregunta de 3 a 500 caracteres, clienteId opcional) con datos reales. 200, 400 o 503.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/asistente/herramientas", "descripcion": "Las herramientas que conoce el asistente (el mapa del sistema).", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/asistente/salud", "descripcion": "Comprueba Authentication, Catalogo, Pedidos, Clientes y el modelo. 200 si todo responde, 503 si no.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas", "descripcion": "Lista de sistemas con un resumen.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas/{nombre}", "descripcion": "Estructura completa de un sistema.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas/{nombre}/impacto", "descripcion": "Qué sistemas consumen a este y qué contratos usan.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas/buscar", "descripcion": "Busca un texto en sistemas, arquitectura e instrucciones (query texto).", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas/arquitectura", "descripcion": "Lista los documentos de arquitectura; /arquitectura/{id} devuelve uno.", "acceso": "Abierto" },
+        { "metodo": "GET", "ruta": "/api/sistemas/instrucciones", "descripcion": "Lista las guías paso a paso; /instrucciones/{id} devuelve una.", "acceso": "Abierto" }
+      ],
+      "consume": [
+        { "sistema": "Authentication", "para": "Obtener su JWT (cliente asistente-service), solo cuando una herramienta lo necesita", "como": "POST /api/tokens; el token se guarda en memoria hasta 1 minuto antes de vencer" },
+        { "sistema": "Catalogo", "para": "Precio, stock y búsqueda de productos", "como": "REST GET /api/productos/{categoria}/{id} y /api/productos/todos, con Bearer" },
+        { "sistema": "Pedidos", "para": "Últimos pedidos de un cliente y estado de un pedido", "como": "REST GET /api/pedidos/detalle y /api/pedidos/{id}" },
+        { "sistema": "Clientes", "para": "Nombre del cliente", "como": "REST GET /api/clientes/{id} (el email se descarta)" },
+        { "sistema": "API de Anthropic", "para": "El modelo Claude que redacta las respuestas y decide qué herramienta usar", "como": "HTTPS con IA:ApiKey; modelo configurable en IA:ModeloChat" }
+      ],
+      "contratos": [
+        { "nombre": "POST /api/asistente/preguntar", "descripcion": "{ pregunta, clienteId? } devuelve { respuesta, fuentes[], herramientasUsadas[] }", "usadoPor": ["Cualquier front o cliente HTTP"] },
+        { "nombre": "mapa-sistema.json", "descripcion": "Las herramientas permitidas; el servicio no arranca si no coinciden con el código", "usadoPor": ["Asistente"] }
+      ],
+      "tests": ["Asistente.Tests", "Asistente.IntegrationTests"],
+      "notas": [
+        "Solo lectura: ninguna herramienta modifica datos.",
+        "El email del cliente nunca llega al modelo.",
+        "Los tests de integración fuerzan IA:ApiKey vacía: nunca llaman a Claude.",
+        "Si un servicio falla durante una pregunta, responde 503 en vez de dejar que el modelo improvise.",
+        "Al agregar una herramienta, actualizar mapa-sistema.json y Herramientas.cs a la vez."
+      ]
+    }
+  ]
+}
