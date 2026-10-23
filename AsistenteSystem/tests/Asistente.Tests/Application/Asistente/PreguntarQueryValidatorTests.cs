@@ -1,9 +1,8 @@
 using Asistente.Application.Asistente;
-using Asistente.Infrastructure.Mapa;
 
-namespace Asistente.Tests;
+namespace Asistente.Tests.Application.Asistente;
 
-public class ValidacionTests
+public class PreguntarQueryValidatorTests
 {
     [Theory]
     [InlineData("")]
@@ -22,14 +21,4 @@ public class ValidacionTests
     [Fact]
     public void Pregunta_valida_pasa() =>
         Assert.True(new PreguntarQueryValidator().Validate(new PreguntarQuery("hay stock de yerba?", Guid.NewGuid())).IsValid);
-
-    [Fact]
-    public void El_mapa_del_api_define_cinco_herramientas_de_solo_lectura()
-    {
-        var ruta = Path.Combine(AppContext.BaseDirectory, "mapa-sistema.json");
-        var mapa = new MapaSistema(ruta);
-
-        Assert.Equal(5, mapa.Herramientas.Count);
-        Assert.All(mapa.Herramientas, h => Assert.True(h.SoloLectura));
-    }
 }

@@ -1,16 +1,13 @@
+using Asistente.Domain;
 using Asistente.Infrastructure.Servicios;
+using Asistente.Tests.Application.Fakes;
+using Asistente.Tests.Infrastructure.Fakes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Asistente.Tests;
+namespace Asistente.Tests.Infrastructure.Servicios;
 
-internal sealed class TokenQueFalla : ITokenProvider
-{
-    public Task<TokenInfo> ObtenerAsync(bool renovar = false, CancellationToken cancellationToken = default) =>
-        throw new HttpRequestException("Authentication no responde.");
-}
-
-public class SaludTests
+public class VerificadorSaludTests
 {
     private static (VerificadorSalud Verificador, ServidorFalso Catalogo) Crear(ITokenProvider token)
     {
@@ -28,7 +25,7 @@ public class SaludTests
 
         var verificador = new VerificadorSalud(
             services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>(), token,
-            new MapaFalso(new Asistente.Domain.HerramientaInfo("ObtenerPrecioYStock", "d", "Catalogo", "GET /x", true)),
+            new MapaFalso(new HerramientaInfo("ObtenerPrecioYStock", "d", "Catalogo", "GET /x", true)),
             new ConfigurationBuilder().Build());
         return (verificador, catalogo);
     }

@@ -2,10 +2,12 @@ using Asistente.Application.Exceptions;
 using Asistente.Application.Sistemas;
 using Asistente.Domain;
 using Asistente.Infrastructure.IA;
+using Asistente.Tests.Application.Fakes;
+using Asistente.Tests.Infrastructure.Fakes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Asistente.Tests;
+namespace Asistente.Tests.Infrastructure.IA;
 
 public class SistemasIATests
 {
